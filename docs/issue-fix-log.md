@@ -1,6 +1,10 @@
 # Issue & fix log
 
-This document records problems reported for BuddyNagar, what changed (if anything), and why. It is **appended over time** when new issues are fixed—no need to ask for updates each time.
+This document records problems reported for BuddyNagar, what changed (if anything), and why.
+
+**Maintenance:** Append a new dated `##` section whenever you fix a user-facing bug, clarify confusing behavior, or ship a notable behavior/UI change tied to a reported issue. Do this as part of the same change set when possible—**the user should not have to ask for log updates.**
+
+Also keep `docs/phasewise.md` in sync when work maps to a PRD phase; this file is for **incidents, root causes, and fixes** in narrative form.
 
 ---
 
@@ -110,4 +114,28 @@ This document records problems reported for BuddyNagar, what changed (if anythin
 
 ---
 
-*(End of log — new entries go below this line.)*
+## 2026-03-29 — Production: news section empty on Vercel (NewsAPI vs RSS)
+
+**Reported:** No headlines on `buddiesnagar.vercel.app` even with `NEWS_API_KEY` set in Vercel; old copy always said to add the key.
+
+**Cause:** NewsAPI.org **free Developer** plan is for development only; requests from production hosts (e.g. Vercel) often fail with **HTTP 426** (or similar), so the server got **zero articles** and **no cache rows** per category. The subtitle under “Today’s news” was **static** and did not reflect whether the key was present.
+
+**Fix:**
+
+- **RSS fallback** — `src/lib/news/rssFallback.ts`: if NewsAPI yields no usable articles, fetch **public RSS feeds** mapped by category (e.g. BBC, The Hindu Telangana, NDTV India), parse without new npm dependencies, return the same `NewsArticle` shape, and **insert into `news_articles_cache`** like NewsAPI results.
+- **`GET /api/news`** — Surface `newsApiHttpStatus`, `newsApiErrorCode`, `missingNewsApiKey` on failure paths; treat NewsAPI JSON `{ status: "error" }` as failure; if live articles exist but **Supabase service role** is missing, **still return those articles** (do not drop them and fall through to empty stale).
+- **News UI** — Neutral caching blurb; when responses use RSS, set `usedRssFallback` and explain briefly; keep targeted hints for missing key, 426, and 401 / `apiKeyInvalid`.
+
+**Files:** `src/lib/news/rssFallback.ts`, `src/app/api/news/route.ts`, `src/components/sections/NewsSection.tsx`
+
+---
+
+## 2026-03-29 — News & Cinema: horizontal carousel (prev / next)
+
+**Requested:** Show headline and cinema cards in a **horizontal row** with **left / right** navigation for the selected category or filter, instead of a 2-column grid of all items at once.
+
+**Fix:** New `HorizontalCarousel` in `src/components/ui/horizontal-carousel.tsx` — horizontal `overflow-x` strip with scroll-snap, hidden scrollbars, chevron buttons, disabled state at the ends, and `scrollResetKey` to reset scroll when category/filter or list identity changes. Integrated into **NewsSection** (including loading skeletons) and **CinemaNewsSection**.
+
+**Files:** `src/components/ui/horizontal-carousel.tsx`, `src/components/sections/NewsSection.tsx`, `src/components/sections/CinemaNewsSection.tsx`
+
+---

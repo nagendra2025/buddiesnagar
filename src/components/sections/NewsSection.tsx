@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   NEWS_CATEGORIES,
@@ -9,6 +9,10 @@ import {
 } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  HorizontalCarousel,
+  carouselSlideClassName,
+} from "@/components/ui/horizontal-carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper } from "lucide-react";
 import { logger } from "@/lib/logger";
@@ -83,14 +87,20 @@ export default function NewsSection({
     void load(category);
   }, [category, load]);
 
-  const filtered = articles.filter((a) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return (
-      (a.title ?? "").toLowerCase().includes(q) ||
-      (a.description ?? "").toLowerCase().includes(q)
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return articles;
+    return articles.filter(
+      (a) =>
+        (a.title ?? "").toLowerCase().includes(q) ||
+        (a.description ?? "").toLowerCase().includes(q),
     );
-  });
+  }, [articles, query]);
+
+  const newsCarouselKey = useMemo(
+    () => `${category}::${query}::${filtered.map((a) => a.id).join("|")}`,
+    [category, query, filtered],
+  );
 
   return (
     <section id="news" className="scroll-mt-20 py-12 px-4">
@@ -148,26 +158,37 @@ export default function NewsSection({
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-4 space-y-2">
-                    <Skeleton className="h-32 w-full" />
+        {loading ? (
+          <HorizontalCarousel
+            className="mt-6"
+            scrollResetKey={category}
+          >
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={carouselSlideClassName}>
+                <Card className="h-full">
+                  <CardContent className="space-y-2 p-4">
+                    <Skeleton className="aspect-video w-full rounded-xl" />
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-4 w-full" />
                   </CardContent>
                 </Card>
-              ))
-            : null}
-          {!loading && filtered.length === 0 ? (
-            <p className="col-span-full text-center text-muted-foreground">
-              No articles for this filter.
-            </p>
-          ) : null}
-          {!loading
-            ? filtered.map((a) => (
-                <Card key={a.id}>
+              </div>
+            ))}
+          </HorizontalCarousel>
+        ) : null}
+        {!loading && filtered.length === 0 ? (
+          <p className="mt-6 text-center text-muted-foreground">
+            No articles for this filter.
+          </p>
+        ) : null}
+        {!loading && filtered.length > 0 ? (
+          <HorizontalCarousel
+            className="mt-6"
+            scrollResetKey={newsCarouselKey}
+          >
+            {filtered.map((a) => (
+              <div key={a.id} className={carouselSlideClassName}>
+                <Card className="h-full overflow-hidden">
                   <CardContent className="p-0">
                     {a.image_url ? (
                       <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted">
@@ -176,7 +197,7 @@ export default function NewsSection({
                           alt=""
                           fill
                           className="object-cover"
-                          sizes="(max-width:768px) 100vw, 50vw"
+                          sizes="320px"
                           unoptimized
                         />
                       </div>
@@ -206,9 +227,10 @@ export default function NewsSection({
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            : null}
-        </div>
+              </div>
+            ))}
+          </HorizontalCarousel>
+        ) : null}
       </div>
     </section>
   );

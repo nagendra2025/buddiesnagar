@@ -8,6 +8,10 @@ import type { CinemaIndustry, CinemaNewsRow } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  HorizontalCarousel,
+  carouselSlideClassName,
+} from "@/components/ui/horizontal-carousel";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -58,6 +62,11 @@ export default function CinemaNewsSection({
     if (filter === "All") return items;
     return items.filter((i) => i.industry === filter);
   }, [items, filter]);
+
+  const cinemaCarouselKey = useMemo(
+    () => `${filter}::${filtered.map((i) => i.id).join("|")}`,
+    [filter, filtered],
+  );
 
   async function onLike(id: string) {
     if (!userId || liked.has(id)) return;
@@ -168,62 +177,64 @@ export default function CinemaNewsSection({
           ))}
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {filtered.length === 0 ? (
-            <p className="col-span-full text-center text-muted-foreground">
-              No posts in this filter yet.
-            </p>
-          ) : (
-            filtered.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-0">
-                  {item.image_url ? (
-                    <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted">
-                      <Image
-                        src={item.image_url}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="(max-width:768px) 100vw, 50vw"
-                      />
-                    </div>
-                  ) : null}
-                  <div className="space-y-2 p-4">
-                    <p className="text-xs font-medium uppercase text-primary">
-                      {item.industry}
-                      {item.movie_name ? ` · ${item.movie_name}` : ""}
-                    </p>
-                    <h3 className="text-lg font-semibold">{item.title}</h3>
-                    {item.content ? (
-                      <p className="line-clamp-4 text-sm text-muted-foreground">
-                        {item.content}
-                      </p>
-                    ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      By {item.profiles?.full_name ?? "Buddy"}
-                    </p>
-                    <div className="flex items-center gap-2 pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={!userId || liked.has(item.id)}
-                        className="gap-1"
-                        onClick={() => void onLike(item.id)}
-                      >
-                        <Heart
-                          className={`h-4 w-4 ${liked.has(item.id) ? "fill-primary text-primary" : ""}`}
-                          aria-hidden
+        {filtered.length === 0 ? (
+          <p className="mt-4 text-center text-muted-foreground">
+            No posts in this filter yet.
+          </p>
+        ) : (
+          <HorizontalCarousel className="mt-4" scrollResetKey={cinemaCarouselKey}>
+            {filtered.map((item) => (
+              <div key={item.id} className={carouselSlideClassName}>
+                <Card className="h-full overflow-hidden">
+                  <CardContent className="p-0">
+                    {item.image_url ? (
+                      <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted">
+                        <Image
+                          src={item.image_url}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="320px"
                         />
-                        {item.likes ?? 0}
-                      </Button>
+                      </div>
+                    ) : null}
+                    <div className="space-y-2 p-4">
+                      <p className="text-xs font-medium uppercase text-primary">
+                        {item.industry}
+                        {item.movie_name ? ` · ${item.movie_name}` : ""}
+                      </p>
+                      <h3 className="text-lg font-semibold">{item.title}</h3>
+                      {item.content ? (
+                        <p className="line-clamp-4 text-sm text-muted-foreground">
+                          {item.content}
+                        </p>
+                      ) : null}
+                      <p className="text-xs text-muted-foreground">
+                        By {item.profiles?.full_name ?? "Buddy"}
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!userId || liked.has(item.id)}
+                          className="gap-1"
+                          onClick={() => void onLike(item.id)}
+                        >
+                          <Heart
+                            className={`h-4 w-4 ${liked.has(item.id) ? "fill-primary text-primary" : ""}`}
+                            aria-hidden
+                          />
+                          {item.likes ?? 0}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </HorizontalCarousel>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
