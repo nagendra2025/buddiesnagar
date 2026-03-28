@@ -122,10 +122,11 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
             </Button>
           ) : (
             <p className="max-w-sm text-sm text-muted-foreground">
-              <a href="#hero" className="font-medium text-primary underline-offset-4 hover:underline">
-                Sign in
-              </a>{" "}
-              (hero section) to post a poem.
+              <a href="#sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
+                Get login link
+              </a>
+              {" — "}
+              use your registered email.
             </p>
           )}
         </div>

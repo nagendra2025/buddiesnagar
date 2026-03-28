@@ -221,7 +221,7 @@ export default async function Home() {
   return (
     <>
       <ScrollProgress />
-      <SiteNav />
+      <SiteNav isSignedIn={Boolean(user)} />
       <main className="flex-1">
         <HeroRegistration
           initialOpen={openFriends}
@@ -229,6 +229,7 @@ export default async function Home() {
           pendingMasterFriendId={pendingMasterFriendId}
           pendingFullName={pendingFullName}
           needsProfile={needsProfile}
+          isSignedIn={Boolean(user)}
         />
         <ProfilesSection profiles={joined} />
         <SpotlightSection profiles={joined} wishes={wishList} />

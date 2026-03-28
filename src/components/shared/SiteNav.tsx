@@ -12,7 +12,11 @@ const links = [
   { href: "#suggest", label: "Ideas" },
 ] as const;
 
-export default function SiteNav() {
+export default function SiteNav({
+  isSignedIn = false,
+}: {
+  isSignedIn?: boolean;
+}) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
@@ -32,6 +36,14 @@ export default function SiteNav() {
               {l.label}
             </Link>
           ))}
+          {!isSignedIn ? (
+            <Link
+              href="#sign-in"
+              className="min-h-11 min-w-11 rounded-md px-2 py-2 text-sm font-medium text-primary hover:underline md:px-3"
+            >
+              Log in
+            </Link>
+          ) : null}
         </nav>
       </div>
       <div className="h-0.5 w-full bg-primary/15" aria-hidden>

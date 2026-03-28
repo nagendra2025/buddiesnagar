@@ -24,6 +24,8 @@ interface HeroRegistrationProps {
   pendingMasterFriendId: string | null;
   pendingFullName: string | null;
   needsProfile: boolean;
+  /** Hide returning-user login strip when session is already active. */
+  isSignedIn?: boolean;
 }
 
 export default function HeroRegistration({
@@ -32,6 +34,7 @@ export default function HeroRegistration({
   pendingMasterFriendId,
   pendingFullName,
   needsProfile,
+  isSignedIn = false,
 }: HeroRegistrationProps) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<MasterFriend | null>(null);
@@ -39,6 +42,9 @@ export default function HeroRegistration({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [joined, setJoined] = useState<Profile[]>(initialJoined);
+  const [returnEmail, setReturnEmail] = useState("");
+  const [returnBusy, setReturnBusy] = useState(false);
+  const [returnMessage, setReturnMessage] = useState<string | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -106,6 +112,31 @@ export default function HeroRegistration({
     setOpen(false);
   }
 
+  async function sendReturningMagicLink() {
+    if (!returnEmail.trim()) return;
+    setReturnBusy(true);
+    setReturnMessage(null);
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const redirect = `${origin}/auth/callback`;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: returnEmail.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: redirect,
+      },
+    });
+    setReturnBusy(false);
+    if (error) {
+      logger.error("HeroRegistration", "returning signInWithOtp failed", {
+        message: error.message,
+      });
+      setReturnMessage("Could not send email. Check the address and try again.");
+      return;
+    }
+    setReturnMessage("Check your inbox — open the link on this device to stay signed in.");
+    setReturnEmail("");
+  }
+
   return (
     <section
       id="hero"
@@ -121,6 +152,49 @@ export default function HeroRegistration({
             news, and celebrations in one scroll.
           </p>
         </div>
+
+        {!isSignedIn ? (
+          <div
+            id="sign-in"
+            className="scroll-mt-24 rounded-xl border border-primary/25 bg-card p-4 shadow-sm md:p-5"
+          >
+            <p className="font-display text-lg font-semibold text-foreground">
+              Back again?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your registered email → magic login link. New buddy? Pick your
+              name under “Names on the wall” instead.
+            </p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="return-email" className="sr-only">
+                  Email
+                </Label>
+                <Input
+                  id="return-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="you@example.com"
+                  value={returnEmail}
+                  onChange={(e) => setReturnEmail(e.target.value)}
+                  className="h-11"
+                />
+              </div>
+              <Button
+                type="button"
+                className="h-11 shrink-0 sm:min-w-[9rem]"
+                disabled={returnBusy || !returnEmail.trim()}
+                onClick={() => void sendReturningMagicLink()}
+              >
+                {returnBusy ? "Sending…" : "Email login link"}
+              </Button>
+            </div>
+            {returnMessage ? (
+              <p className="mt-3 text-sm text-muted-foreground">{returnMessage}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         {needsProfile && pendingMasterFriendId && (
           <ProfileCompletionForm

@@ -169,10 +169,11 @@ export default function CinemaNewsSection({
             </p>
           ) : (
             <p className="max-w-sm text-sm text-muted-foreground">
-              <a href="#hero" className="font-medium text-primary underline-offset-4 hover:underline">
-                Sign in
-              </a>{" "}
-              (hero section) to post cinema updates — if your account has permission.
+              <a href="#sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
+                Get login link
+              </a>
+              {" — "}
+              same email as before. Cinema posts need admin or cinema poster role.
             </p>
           )}
         </div>

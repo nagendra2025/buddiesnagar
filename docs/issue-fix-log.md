@@ -154,3 +154,18 @@ Also keep `docs/phasewise.md` in sync when work maps to a PRD phase; this file i
 **Files:** `src/components/sections/CinemaNewsSection.tsx`, `src/components/sections/PoetryWallSection.tsx`, `src/components/sections/MemoryLaneSection.tsx`
 
 ---
+
+## 2026-03-29 — Returning users: unclear where to “sign in” at `#hero`
+
+**Reported:** Links said “Sign in (hero section)” but the hero only showed the invite wall (“tap your name”), which feels like first-time registration, not a quick session refresh.
+
+**Fix:**
+
+- **`#sign-in` block** in `HeroRegistration`: email field + **Email login link** calls `signInWithOtp` **without** `master_friend_id` / `full_name` metadata — same magic-link flow as registration, but for **existing** Supabase auth users only.
+- Hidden when `isSignedIn` (passed from `page.tsx`).
+- **Site nav:** **Log in** → `#sign-in` when logged out.
+- Cinema / poetry / memory hints now link **Get login link** → `#sign-in` with shorter copy.
+
+**Files:** `src/components/sections/HeroRegistration.tsx`, `src/app/page.tsx`, `src/components/shared/SiteNav.tsx`, `src/components/sections/CinemaNewsSection.tsx`, `src/components/sections/PoetryWallSection.tsx`, `src/components/sections/MemoryLaneSection.tsx`
+
+---

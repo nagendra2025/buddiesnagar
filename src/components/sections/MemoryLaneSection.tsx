@@ -127,10 +127,11 @@ export default function MemoryLaneSection({
             </Button>
           ) : (
             <p className="max-w-sm text-sm text-muted-foreground">
-              <a href="#hero" className="font-medium text-primary underline-offset-4 hover:underline">
-                Sign in
-              </a>{" "}
-              (hero section) to add a memory.
+              <a href="#sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
+                Get login link
+              </a>
+              {" — "}
+              use your registered email.
             </p>
           )}
         </div>
