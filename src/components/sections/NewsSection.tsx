@@ -23,6 +23,7 @@ export default function NewsSection({
   const [loading, setLoading] = useState(true);
   const [fallback, setFallback] = useState(false);
   const [stale, setStale] = useState(false);
+  const [newsHint, setNewsHint] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   const load = useCallback(async (cat: NewsCategory) => {
@@ -36,16 +37,40 @@ export default function NewsSection({
         articles?: NewsArticle[];
         fallback?: boolean;
         stale?: boolean;
+        newsApiHttpStatus?: number | null;
+        newsApiErrorCode?: string | null;
+        missingNewsApiKey?: boolean;
       };
       setArticles(data.articles ?? []);
       setFallback(Boolean(data.fallback));
       setStale(Boolean(data.stale));
+
+      let hint: string | null = null;
+      if (data.fallback) {
+        if (data.missingNewsApiKey) {
+          hint =
+            "Live headlines need NEWS_API_KEY on the server (e.g. Vercel → Environment Variables).";
+        } else if (data.newsApiHttpStatus === 426) {
+          hint =
+            "NewsAPI’s free Developer plan is not allowed on production hosts (e.g. Vercel). You’ll need a paid NewsAPI plan or a different news source.";
+        } else if (
+          data.newsApiHttpStatus === 401 ||
+          data.newsApiErrorCode === "apiKeyInvalid"
+        ) {
+          hint = "NewsAPI rejected the key — check that NEWS_API_KEY is correct.";
+        } else if (typeof data.newsApiHttpStatus === "number" && data.newsApiHttpStatus >= 400) {
+          hint = `NewsAPI returned HTTP ${data.newsApiHttpStatus}. Check Vercel function logs for details.`;
+        }
+      }
+      setNewsHint(hint);
     } catch (e) {
       logger.error("NewsSection", "fetch failed", {
         message: e instanceof Error ? e.message : "unknown",
       });
       setArticles([]);
       setFallback(true);
+      setStale(false);
+      setNewsHint(null);
     }
     setLoading(false);
   }, []);
@@ -72,9 +97,7 @@ export default function NewsSection({
               Today&apos;s news
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Headlines cached for speed — add{" "}
-              <code className="rounded bg-muted px-1">NEWS_API_KEY</code> for
-              fresh fetches.
+              Headlines are cached for a few hours so the page stays fast.
             </p>
           </div>
           <Newspaper className="hidden h-8 w-8 text-primary md:block" aria-hidden />
@@ -105,11 +128,14 @@ export default function NewsSection({
         </label>
 
         {fallback ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            {stale
-              ? "Showing older cached headlines — live fetch unavailable."
-              : "No live headlines right now. Configure NewsAPI or check back later."}
-          </p>
+          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+            <p>
+              {stale
+                ? "Showing older cached headlines — a fresh fetch from NewsAPI did not succeed."
+                : "No headlines to show yet — live fetch did not return any articles and there is no cache for this category."}
+            </p>
+            {newsHint ? <p className="text-foreground/90">{newsHint}</p> : null}
+          </div>
         ) : null}
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">

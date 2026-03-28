@@ -20,9 +20,15 @@ function mapCategoryToNewsApi(category: string): string {
   return "general";
 }
 
-async function fetchFromNewsApi(category: string): Promise<NewsArticle[]> {
+type NewsApiFetchResult = {
+  articles: NewsArticle[];
+  newsApiHttpStatus?: number;
+  newsApiErrorCode?: string;
+};
+
+async function fetchFromNewsApi(category: string): Promise<NewsApiFetchResult> {
   const key = process.env.NEWS_API_KEY;
-  if (!key) return [];
+  if (!key) return { articles: [] };
 
   const q = mapCategoryToNewsApi(category);
   const url = new URL("https://newsapi.org/v2/top-headlines");
@@ -40,11 +46,10 @@ async function fetchFromNewsApi(category: string): Promise<NewsArticle[]> {
   }
 
   const res = await fetch(url.toString(), { next: { revalidate: 0 } });
-  if (!res.ok) {
-    logger.warn("api/news", "NewsAPI request failed", { status: res.status });
-    return [];
-  }
-  const data = (await res.json()) as {
+  const raw = (await res.json()) as {
+    status?: string;
+    code?: string;
+    message?: string;
     articles?: Array<{
       title?: string;
       description?: string;
@@ -54,9 +59,26 @@ async function fetchFromNewsApi(category: string): Promise<NewsArticle[]> {
       publishedAt?: string;
     }>;
   };
-  const articles = data.articles ?? [];
+
+  if (!res.ok) {
+    logger.warn("api/news", "NewsAPI request failed", { status: res.status });
+    return { articles: [], newsApiHttpStatus: res.status };
+  }
+  if (raw.status === "error") {
+    logger.warn("api/news", "NewsAPI error body", {
+      code: raw.code,
+      message: raw.message,
+    });
+    return {
+      articles: [],
+      newsApiHttpStatus: res.status,
+      newsApiErrorCode: raw.code,
+    };
+  }
+
+  const articles = raw.articles ?? [];
   const now = new Date().toISOString();
-  return articles
+  const mapped = articles
     .filter((a) => a.title && a.url)
     .map((a, i) => ({
       id: `${category}-${i}-${a.url}`,
@@ -69,6 +91,7 @@ async function fetchFromNewsApi(category: string): Promise<NewsArticle[]> {
       published_at: a.publishedAt ?? null,
       fetched_at: now,
     }));
+  return { articles: mapped };
 }
 
 export async function GET(request: Request) {
@@ -109,23 +132,29 @@ export async function GET(request: Request) {
     });
   }
 
-  const fresh = await fetchFromNewsApi(category);
+  const {
+    articles: fresh,
+    newsApiHttpStatus,
+    newsApiErrorCode,
+  } = await fetchFromNewsApi(category);
   const service = createServiceClient();
 
-  if (fresh.length > 0 && service) {
-    const rows = fresh.map((a) => ({
-      category: a.category,
-      title: a.title,
-      description: a.description,
-      url: a.url,
-      image_url: a.image_url,
-      source_name: a.source_name,
-      published_at: a.published_at,
-      fetched_at: a.fetched_at,
-    }));
-    const { error: insErr } = await service.from("news_articles_cache").insert(rows);
-    if (insErr) {
-      logger.error("api/news", "cache insert failed", { message: insErr.message });
+  if (fresh.length > 0) {
+    if (service) {
+      const rows = fresh.map((a) => ({
+        category: a.category,
+        title: a.title,
+        description: a.description,
+        url: a.url,
+        image_url: a.image_url,
+        source_name: a.source_name,
+        published_at: a.published_at,
+        fetched_at: a.fetched_at,
+      }));
+      const { error: insErr } = await service.from("news_articles_cache").insert(rows);
+      if (insErr) {
+        logger.error("api/news", "cache insert failed", { message: insErr.message });
+      }
     }
     return NextResponse.json({ articles: fresh, fallback: false, stale: false });
   }
@@ -137,9 +166,15 @@ export async function GET(request: Request) {
     .order("fetched_at", { ascending: false })
     .limit(12);
 
+  const staleList = (staleRows ?? []) as NewsArticle[];
+  const hasKey = Boolean(process.env.NEWS_API_KEY);
+
   return NextResponse.json({
-    articles: (staleRows ?? []) as NewsArticle[],
+    articles: staleList,
     fallback: true,
-    stale: true,
+    stale: staleList.length > 0,
+    newsApiHttpStatus: newsApiHttpStatus ?? null,
+    newsApiErrorCode: newsApiErrorCode ?? null,
+    missingNewsApiKey: !hasKey,
   });
 }
