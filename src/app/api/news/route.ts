@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { fetchNewsFromRss } from "@/lib/news/rssFallback";
 import type { NewsArticle } from "@/lib/types";
 
 const TTL_MS = 2 * 60 * 60 * 1000;
@@ -157,6 +158,32 @@ export async function GET(request: Request) {
       }
     }
     return NextResponse.json({ articles: fresh, fallback: false, stale: false });
+  }
+
+  const rssArticles = await fetchNewsFromRss(category, 12);
+  if (rssArticles.length > 0) {
+    if (service) {
+      const rows = rssArticles.map((a) => ({
+        category: a.category,
+        title: a.title,
+        description: a.description,
+        url: a.url,
+        image_url: a.image_url,
+        source_name: a.source_name,
+        published_at: a.published_at,
+        fetched_at: a.fetched_at,
+      }));
+      const { error: insErr } = await service.from("news_articles_cache").insert(rows);
+      if (insErr) {
+        logger.error("api/news", "RSS cache insert failed", { message: insErr.message });
+      }
+    }
+    return NextResponse.json({
+      articles: rssArticles,
+      fallback: false,
+      stale: false,
+      usedRssFallback: true,
+    });
   }
 
   const { data: staleRows } = await readClient

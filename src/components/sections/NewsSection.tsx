@@ -24,6 +24,7 @@ export default function NewsSection({
   const [fallback, setFallback] = useState(false);
   const [stale, setStale] = useState(false);
   const [newsHint, setNewsHint] = useState<string | null>(null);
+  const [rssFallback, setRssFallback] = useState(false);
   const [query, setQuery] = useState("");
 
   const load = useCallback(async (cat: NewsCategory) => {
@@ -40,10 +41,12 @@ export default function NewsSection({
         newsApiHttpStatus?: number | null;
         newsApiErrorCode?: string | null;
         missingNewsApiKey?: boolean;
+        usedRssFallback?: boolean;
       };
       setArticles(data.articles ?? []);
       setFallback(Boolean(data.fallback));
       setStale(Boolean(data.stale));
+      setRssFallback(Boolean(data.usedRssFallback));
 
       let hint: string | null = null;
       if (data.fallback) {
@@ -71,6 +74,7 @@ export default function NewsSection({
       setFallback(true);
       setStale(false);
       setNewsHint(null);
+      setRssFallback(false);
     }
     setLoading(false);
   }, []);
@@ -99,6 +103,12 @@ export default function NewsSection({
             <p className="mt-2 text-sm text-muted-foreground">
               Headlines are cached for a few hours so the page stays fast.
             </p>
+            {rssFallback ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                These headlines come from public RSS feeds because NewsAPI is
+                unavailable on this host (common on the free NewsAPI plan).
+              </p>
+            ) : null}
           </div>
           <Newspaper className="hidden h-8 w-8 text-primary md:block" aria-hidden />
         </div>
