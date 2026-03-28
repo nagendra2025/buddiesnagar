@@ -139,3 +139,18 @@ Also keep `docs/phasewise.md` in sync when work maps to a PRD phase; this file i
 **Files:** `src/components/ui/horizontal-carousel.tsx`, `src/components/sections/NewsSection.tsx`, `src/components/sections/CinemaNewsSection.tsx`
 
 ---
+
+## 2026-03-29 — “Add post” buttons missing for cinema / poetry / memory
+
+**Reported:** Post / Add icons appeared once, then seemed to disappear.
+
+**Cause (by design):**
+
+1. **Poets corner & Memory lane** — The server passes `userId` from `supabase.auth.getUser()`. If there is **no active session** (magic link expired, different browser/device, cookies cleared, or not signed in), `userId` is `null` and the **Post a poem** / **Add a memory** buttons are hidden.
+2. **Cinema buzz** — Uses `canPostCinema(myProfile)`, which requires `profiles.roles` to include **`admin`** or **`cinema_poster`**. Signed-in **members** without those roles never see **Post update**, even when poetry/memory buttons show.
+
+**UX follow-up:** When posting is not available, each section now shows a short **muted explanation** (sign-in link to `#hero`, or cinema role note) instead of an empty header area.
+
+**Files:** `src/components/sections/CinemaNewsSection.tsx`, `src/components/sections/PoetryWallSection.tsx`, `src/components/sections/MemoryLaneSection.tsx`
+
+---

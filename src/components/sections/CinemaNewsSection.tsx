@@ -160,7 +160,21 @@ export default function CinemaNewsSection({
               <Clapperboard className="h-4 w-4" aria-hidden />
               Post update
             </Button>
-          ) : null}
+          ) : userId ? (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Only{" "}
+              <span className="font-medium text-foreground">admins</span> and{" "}
+              <span className="font-medium text-foreground">cinema posters</span>{" "}
+              can publish here. Ask an admin if you need the cinema poster role.
+            </p>
+          ) : (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              <a href="#hero" className="font-medium text-primary underline-offset-4 hover:underline">
+                Sign in
+              </a>{" "}
+              (hero section) to post cinema updates — if your account has permission.
+            </p>
+          )}
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">

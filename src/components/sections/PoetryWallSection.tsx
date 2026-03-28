@@ -120,7 +120,14 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
               <PenLine className="h-4 w-4" aria-hidden />
               Post a poem
             </Button>
-          ) : null}
+          ) : (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              <a href="#hero" className="font-medium text-primary underline-offset-4 hover:underline">
+                Sign in
+              </a>{" "}
+              (hero section) to post a poem.
+            </p>
+          )}
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">

@@ -125,7 +125,14 @@ export default function MemoryLaneSection({
               <ImagePlus className="h-4 w-4" aria-hidden />
               Add a memory
             </Button>
-          ) : null}
+          ) : (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              <a href="#hero" className="font-medium text-primary underline-offset-4 hover:underline">
+                Sign in
+              </a>{" "}
+              (hero section) to add a memory.
+            </p>
+          )}
         </div>
 
         {isAdmin && pendingAll.length > 0 ? (
