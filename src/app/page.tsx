@@ -1,65 +1,270 @@
-import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
+import SiteNav from "@/components/shared/SiteNav";
+import ScrollProgress from "@/components/shared/ScrollProgress";
+import HeroRegistration from "@/components/sections/HeroRegistration";
+import ProfilesSection from "@/components/sections/ProfilesSection";
+import SpotlightSection from "@/components/sections/SpotlightSection";
+import FunFactSection from "@/components/sections/FunFactSection";
+import NewsSection from "@/components/sections/NewsSection";
+import CinemaNewsSection from "@/components/sections/CinemaNewsSection";
+import PoetryWallSection from "@/components/sections/PoetryWallSection";
+import MemoryLaneSection from "@/components/sections/MemoryLaneSection";
+import SuggestionsSection from "@/components/sections/SuggestionsSection";
+import { canPostCinema, canPostPoetry, isAdmin } from "@/lib/permissions";
+import { oneEmbedded } from "@/lib/embeddings";
+import type {
+  CinemaNewsRow,
+  FunFact,
+  GalleryPhotoRow,
+  MasterFriend,
+  PoetryWallRow,
+  Profile,
+  SuggestionRow,
+  Wish,
+} from "@/lib/types";
+import type { NewsCategory } from "@/lib/types";
+import Link from "next/link";
+import { signPendingGalleryPreviews } from "@/lib/gallerySignedPreview";
+import { contentExpiryCutoffIso } from "@/lib/contentTtl";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+function ConfigMissing() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <main className="flex flex-1 flex-col items-center justify-center px-4 py-24 text-center">
+      <p className="font-display text-2xl font-semibold">BuddyNagar setup</p>
+      <p className="mt-3 max-w-md text-muted-foreground">
+        Copy{" "}
+        <code className="rounded bg-muted px-1">.env.example</code> to{" "}
+        <code className="rounded bg-muted px-1">.env.local</code> and add your
+        Supabase URL and anon key. Then run the SQL migration in{" "}
+        <code className="rounded bg-muted px-1">supabase/migrations</code>.
+      </p>
+    </main>
+  );
+}
+
+function pickTodayFact(facts: FunFact[]): FunFact | null {
+  if (facts.length === 0) return null;
+  const day = new Date();
+  const key =
+    (day.getFullYear() * 1000 + day.getMonth() * 50 + day.getDate()) %
+    facts.length;
+  return facts[key] ?? facts[0] ?? null;
+}
+
+export default async function Home() {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return <ConfigMissing />;
+  }
+
+  const supabase = await createClient();
+
+  const [
+    { data: masterFriends, error: mfError },
+    { data: profiles },
+    { data: wishes },
+    { data: funFacts },
+    { data: userData },
+  ] = await Promise.all([
+    supabase.from("master_friends").select("*").order("display_name"),
+    supabase.from("profiles").select("*").order("join_order", { ascending: true }),
+    supabase.from("wishes").select("*").eq("is_active", true),
+    supabase.from("fun_facts").select("*"),
+    supabase.auth.getUser(),
+  ]);
+
+  if (mfError) {
+    return (
+      <main className="p-8 text-center text-red-600">
+        Could not load buddy list. Check Supabase tables and RLS.
       </main>
-    </div>
+    );
+  }
+
+  const user = userData.user;
+  let myProfile: Profile | null = null;
+  if (user) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+    myProfile = prof as Profile | null;
+  }
+
+  const meta = user?.user_metadata as Record<string, string | undefined> | undefined;
+  const pendingMasterFriendId =
+    typeof meta?.master_friend_id === "string" ? meta.master_friend_id : null;
+  const pendingFullName =
+    typeof meta?.full_name === "string" ? meta.full_name : null;
+  const needsProfile = Boolean(user && !myProfile && pendingMasterFriendId);
+
+  const openFriends = (masterFriends ?? []) as MasterFriend[];
+  const joined = (profiles ?? []) as Profile[];
+  const wishList = (wishes ?? []) as Wish[];
+  const facts = (funFacts ?? []) as FunFact[];
+  const todayFact = pickTodayFact(facts);
+
+  const defaultNewsCategory: NewsCategory = "Cricket";
+  const postsNotOlderThan = contentExpiryCutoffIso();
+
+  const cinemaSelect =
+    "id, posted_by, title, content, image_url, movie_name, industry, tags, likes, is_published, published_at, profiles!posted_by(full_name)";
+  const poetrySelect =
+    "id, posted_by, image_url, caption, poet_name, language, tags, likes, is_published, posted_at, profiles!posted_by(full_name)";
+  const gallerySelect =
+    "id, uploaded_by, image_url, caption, year_approx, likes, is_approved, uploaded_at, pending_storage_path, profiles!uploaded_by(full_name)";
+  const suggestionSelect =
+    "id, user_id, content, status, votes, created_at, profiles!user_id(full_name)";
+
+  const galleryAsAdmin = Boolean(user && isAdmin(myProfile));
+  let galleryQ = supabase
+    .from("photo_gallery")
+    .select(gallerySelect)
+    .gte("uploaded_at", postsNotOlderThan);
+  if (galleryAsAdmin) {
+    // RLS allows admins to read all rows (see migration 003).
+  } else if (user) {
+    galleryQ = galleryQ.or(`is_approved.eq.true,uploaded_by.eq.${user.id}`);
+  } else {
+    galleryQ = galleryQ.eq("is_approved", true);
+  }
+
+  const [
+    { data: cinemaRows },
+    { data: poetryRows },
+    { data: galleryRows },
+    { data: suggestionRows },
+    { data: cinemaLikeRows },
+    { data: poetryLikeRows },
+    { data: galleryLikeRows },
+    { data: voteRows },
+  ] = await Promise.all([
+    supabase
+      .from("cinema_news")
+      .select(cinemaSelect)
+      .eq("is_published", true)
+      .gte("published_at", postsNotOlderThan)
+      .order("published_at", { ascending: false }),
+    supabase
+      .from("poetry_wall")
+      .select(poetrySelect)
+      .eq("is_published", true)
+      .gte("posted_at", postsNotOlderThan)
+      .order("posted_at", { ascending: false }),
+    galleryQ.order("uploaded_at", { ascending: false }),
+    supabase.from("suggestions").select(suggestionSelect).order("created_at", { ascending: false }),
+    user
+      ? supabase.from("cinema_news_likes").select("news_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { news_id: string }[] | null }),
+    user
+      ? supabase.from("poetry_wall_likes").select("poem_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { poem_id: string }[] | null }),
+    user
+      ? supabase.from("photo_gallery_likes").select("photo_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { photo_id: string }[] | null }),
+    user
+      ? supabase.from("suggestion_votes").select("suggestion_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { suggestion_id: string }[] | null }),
+  ]);
+
+  type P = { full_name: string };
+
+  const cinemaItems = (cinemaRows ?? []).map((r) => ({
+    ...(r as Record<string, unknown>),
+    profiles: oneEmbedded<P>(
+      (r as { profiles?: P | P[] | null }).profiles ?? null,
+    ),
+  })) as CinemaNewsRow[];
+
+  const poetryItems = (poetryRows ?? []).map((r) => ({
+    ...(r as Record<string, unknown>),
+    profiles: oneEmbedded<P>(
+      (r as { profiles?: P | P[] | null }).profiles ?? null,
+    ),
+  })) as PoetryWallRow[];
+
+  const galleryItems = (galleryRows ?? []).map((r) => ({
+    ...(r as Record<string, unknown>),
+    profiles: oneEmbedded<P>(
+      (r as { profiles?: P | P[] | null }).profiles ?? null,
+    ),
+  })) as GalleryPhotoRow[];
+
+  const pendingPreviewTargets = galleryItems
+    .filter((r) => !r.is_approved && r.pending_storage_path)
+    .map((r) => ({ id: r.id, path: r.pending_storage_path ?? null }));
+
+  const previewMap = await signPendingGalleryPreviews(pendingPreviewTargets, 3600);
+
+  const galleryItemsWithPreview = galleryItems.map((r) => ({
+    ...r,
+    preview_url: previewMap.get(r.id),
+  }));
+
+  const suggestionItems = (suggestionRows ?? []).map((r) => ({
+    ...(r as Record<string, unknown>),
+    profiles: oneEmbedded<P>(
+      (r as { profiles?: P | P[] | null }).profiles ?? null,
+    ),
+  })) as SuggestionRow[];
+
+  const likedCinema = (cinemaLikeRows ?? []).map((r) => r.news_id);
+  const likedPoetry = (poetryLikeRows ?? []).map((r) => r.poem_id);
+  const likedGallery = (galleryLikeRows ?? []).map((r) => r.photo_id);
+  const votedIds = (voteRows ?? []).map((r) => r.suggestion_id);
+
+  return (
+    <>
+      <ScrollProgress />
+      <SiteNav />
+      <main className="flex-1">
+        <HeroRegistration
+          initialOpen={openFriends}
+          initialJoined={joined}
+          pendingMasterFriendId={pendingMasterFriendId}
+          pendingFullName={pendingFullName}
+          needsProfile={needsProfile}
+        />
+        <ProfilesSection profiles={joined} />
+        <SpotlightSection profiles={joined} wishes={wishList} />
+        <FunFactSection fact={todayFact} userId={user?.id ?? null} />
+        <NewsSection defaultCategory={defaultNewsCategory} />
+        <CinemaNewsSection
+          initialItems={cinemaItems}
+          userId={user?.id ?? null}
+          canPost={canPostCinema(myProfile)}
+          likedIds={likedCinema}
+        />
+        <PoetryWallSection
+          initialItems={poetryItems}
+          userId={user?.id ?? null}
+          canPost={canPostPoetry(user?.id ?? null)}
+          likedIds={likedPoetry}
+        />
+        <MemoryLaneSection
+          initialItems={galleryItemsWithPreview}
+          userId={user?.id ?? null}
+          isAdmin={galleryAsAdmin}
+          likedIds={likedGallery}
+        />
+        <SuggestionsSection
+          initialItems={suggestionItems}
+          userId={user?.id ?? null}
+          votedIds={votedIds}
+        />
+        <footer className="border-t border-border py-10 text-center text-sm text-muted-foreground">
+          <p>Kadapa Buddies — BuddyNagar</p>
+          <p className="mt-1">{joined.length} buddies and counting</p>
+          <Link href="#hero" className="mt-4 inline-block text-primary">
+            Back to top
+          </Link>
+        </footer>
+      </main>
+    </>
   );
 }

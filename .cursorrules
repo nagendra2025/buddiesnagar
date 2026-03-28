@@ -1,0 +1,18 @@
+
+# Cursor Rules — BuddyNagar
+
+1. Follow PRD strictly.
+2. Do not change UI structure.
+3. Use Next.js App Router.
+4. Use Supabase backend only.
+5. Use shadcn/ui components.
+6. Avoid over-engineering.
+7. Use Tailwind CSS.
+8. API via route handlers only.
+9. Mobile-first design.
+10. TypeScript strict mode.
+11. Reuse components.
+12. Handle edge cases.
+13. Respect RLS.
+14. Implement logging.
+15. After completing a PRD phase, update `docs/phasewise.md` (packages, migrations, routes, sections, dependencies, and how it sets up later phases) so it stays the living phasewise build log.
