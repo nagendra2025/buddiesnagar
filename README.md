@@ -10,6 +10,7 @@ Private SPA for the Kadapa Buddies — **Phase 1** covers registration, profiles
 4. **Auth:** In Supabase → Authentication → URL configuration, add redirect URLs:
    - `http://localhost:3000/auth/callback`
    - your production URL + `/auth/callback`
+   - Under **Providers → Email**, keep **Email** enabled (passwords are used for sign-up and “Back again?” login). If **Confirm email** is on, new members must click the confirmation email once before they can log in with email + password; turning confirmation off speeds local testing but weakens verification—choose per environment.
 5. Set **`CRON_SECRET`** in `.env.local` (long random string). Vercel Cron (see `vercel.json`, hourly) calls `/api/cron/purge-expired-posts` with `Authorization: Bearer <CRON_SECRET>` to delete cinema, poetry, and gallery posts **older than 100 hours** and remove their Storage files. Locally you can trigger the same cleanup with:
    `curl -H "Authorization: Bearer YOUR_CRON_SECRET" "http://localhost:3000/api/cron/purge-expired-posts"`
 6. `npm install` then `npm run dev` and open [http://localhost:3000](http://localhost:3000).

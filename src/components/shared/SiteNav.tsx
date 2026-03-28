@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteNavAuth from "@/components/shared/SiteNavAuth";
 
 const links = [
   { href: "#hero", label: "Home" },
@@ -36,14 +37,7 @@ export default function SiteNav({
               {l.label}
             </Link>
           ))}
-          {!isSignedIn ? (
-            <Link
-              href="#sign-in"
-              className="min-h-11 min-w-11 rounded-md px-2 py-2 text-sm font-medium text-primary hover:underline md:px-3"
-            >
-              Log in
-            </Link>
-          ) : null}
+          <SiteNavAuth isSignedIn={isSignedIn} />
         </nav>
       </div>
       <div className="h-0.5 w-full bg-primary/15" aria-hidden>

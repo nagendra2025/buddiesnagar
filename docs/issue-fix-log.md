@@ -169,3 +169,19 @@ Also keep `docs/phasewise.md` in sync when work maps to a PRD phase; this file i
 **Files:** `src/components/sections/HeroRegistration.tsx`, `src/app/page.tsx`, `src/components/shared/SiteNav.tsx`, `src/components/sections/CinemaNewsSection.tsx`, `src/components/sections/PoetryWallSection.tsx`, `src/components/sections/MemoryLaneSection.tsx`
 
 ---
+
+## 2026-03-29 — Email + password login (avoid checking mail every visit)
+
+**Requested:** “Back again?” should log in on the page with email + password; first join should set password; optional explicit **Log out**; closing the browser is fine otherwise.
+
+**Approach:**
+
+- **Join (names on the wall):** Dialog collects **email + password + confirm** → `supabase.auth.signUp` with the same `user_metadata` (`master_friend_id`, `full_name`) as the old OTP flow. Optional **Prefer a one-time email link?** still calls `signInWithOtp` for edge cases.
+- **Back again?:** **Email + password** → `signInWithPassword`, then `router.refresh()`. Collapsible **No password yet?** sends a one-time magic link (legacy accounts or no password set).
+- **Nav:** **`SiteNavAuth`** — **Log out** calls `signOut` + refresh when signed in; **Log in** still links to `#sign-in`.
+
+**Supabase:** Email provider must allow passwords; if **Confirm email** is enabled, the first sign-up may require one inbox click before password login works (documented in `README.md`).
+
+**Files:** `src/components/sections/HeroRegistration.tsx`, `src/components/shared/SiteNavAuth.tsx`, `src/components/shared/SiteNav.tsx`, `README.md`
+
+---

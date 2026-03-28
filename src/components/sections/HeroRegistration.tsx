@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { MasterFriend, Profile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -18,13 +19,14 @@ import AvatarFallback from "@/components/shared/AvatarFallback";
 import { logger } from "@/lib/logger";
 import ProfileCompletionForm from "@/components/shared/ProfileCompletionForm";
 
+const MIN_PASSWORD_LEN = 8;
+
 interface HeroRegistrationProps {
   initialOpen: MasterFriend[];
   initialJoined: Profile[];
   pendingMasterFriendId: string | null;
   pendingFullName: string | null;
   needsProfile: boolean;
-  /** Hide returning-user login strip when session is already active. */
   isSignedIn?: boolean;
 }
 
@@ -36,15 +38,21 @@ export default function HeroRegistration({
   needsProfile,
   isSignedIn = false,
 }: HeroRegistrationProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<MasterFriend | null>(null);
   const [email, setEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
+  const [joinUseMagicLink, setJoinUseMagicLink] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [joined, setJoined] = useState<Profile[]>(initialJoined);
   const [returnEmail, setReturnEmail] = useState("");
+  const [returnPassword, setReturnPassword] = useState("");
   const [returnBusy, setReturnBusy] = useState(false);
   const [returnMessage, setReturnMessage] = useState<string | null>(null);
+  const [showReturnMagicLink, setShowReturnMagicLink] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -83,7 +91,73 @@ export default function HeroRegistration({
     });
   }, [initialOpen, joined]);
 
-  async function sendMagicLink() {
+  function resetJoinDialog() {
+    setEmail("");
+    setRegPassword("");
+    setRegPasswordConfirm("");
+    setJoinUseMagicLink(false);
+  }
+
+  async function registerWithPassword() {
+    if (!picked || !email.trim()) return;
+    if (regPassword.length < MIN_PASSWORD_LEN) {
+      setMessage(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
+      return;
+    }
+    if (regPassword !== regPasswordConfirm) {
+      setMessage("Passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const redirect = `${origin}/auth/callback`;
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password: regPassword,
+      options: {
+        emailRedirectTo: redirect,
+        data: {
+          master_friend_id: picked.id,
+          full_name: picked.display_name,
+        },
+      },
+    });
+    setBusy(false);
+    if (error) {
+      logger.error("HeroRegistration", "signUp failed", {
+        message: error.message,
+      });
+      const msg = error.message.toLowerCase();
+      if (
+        msg.includes("already") ||
+        msg.includes("registered") ||
+        msg.includes("exists")
+      ) {
+        setMessage(
+          "That email already has an account. Close this dialog and use “Back again?” to log in.",
+        );
+      } else {
+        setMessage(error.message || "Could not create account. Try again.");
+      }
+      return;
+    }
+    setOpen(false);
+    resetJoinDialog();
+    if (data.session) {
+      setMessage(
+        "You’re signed in. Complete your profile below if you see the form.",
+      );
+      router.refresh();
+    } else {
+      setMessage(
+        "Confirm the email we sent you (one time). After that, use “Back again?” with your email and password.",
+      );
+    }
+  }
+
+  async function sendJoinMagicLink() {
     if (!picked || !email.trim()) return;
     setBusy(true);
     setMessage(null);
@@ -108,8 +182,41 @@ export default function HeroRegistration({
       setMessage("Could not send login email. Please try again.");
       return;
     }
-    setMessage("Check your inbox for the BuddyNagar login link.");
     setOpen(false);
+    resetJoinDialog();
+    setMessage("Check your inbox for the BuddyNagar login link.");
+  }
+
+  async function signInReturning() {
+    if (!returnEmail.trim() || !returnPassword) return;
+    setReturnBusy(true);
+    setReturnMessage(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: returnEmail.trim().toLowerCase(),
+      password: returnPassword,
+    });
+    setReturnBusy(false);
+    if (error) {
+      logger.error("HeroRegistration", "signInWithPassword failed", {
+        message: error.message,
+      });
+      const low = error.message.toLowerCase();
+      if (
+        low.includes("invalid") ||
+        low.includes("credentials") ||
+        low.includes("password")
+      ) {
+        setReturnMessage(
+          "Wrong email or password. If you joined before passwords existed, expand “No password yet?” and use a one-time email link.",
+        );
+      } else {
+        setReturnMessage(error.message);
+      }
+      return;
+    }
+    setReturnPassword("");
+    setReturnMessage(null);
+    router.refresh();
   }
 
   async function sendReturningMagicLink() {
@@ -133,8 +240,9 @@ export default function HeroRegistration({
       setReturnMessage("Could not send email. Check the address and try again.");
       return;
     }
-    setReturnMessage("Check your inbox — open the link on this device to stay signed in.");
-    setReturnEmail("");
+    setReturnMessage(
+      "Check your inbox — open the link on this device to sign in.",
+    );
   }
 
   return (
@@ -162,14 +270,12 @@ export default function HeroRegistration({
               Back again?
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your registered email → magic login link. New buddy? Pick your
-              name under “Names on the wall” instead.
+              Log in with the email and password you chose when you joined. New
+              buddy? Pick your name under “Names on the wall” instead.
             </p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch">
-              <div className="min-w-0 flex-1">
-                <Label htmlFor="return-email" className="sr-only">
-                  Email
-                </Label>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:col-span-1">
+                <Label htmlFor="return-email">Email</Label>
                 <Input
                   id="return-email"
                   type="email"
@@ -181,18 +287,63 @@ export default function HeroRegistration({
                   className="h-11"
                 />
               </div>
-              <Button
-                type="button"
-                className="h-11 shrink-0 sm:min-w-[9rem]"
-                disabled={returnBusy || !returnEmail.trim()}
-                onClick={() => void sendReturningMagicLink()}
-              >
-                {returnBusy ? "Sending…" : "Email login link"}
-              </Button>
+              <div className="grid gap-2 sm:col-span-1">
+                <Label htmlFor="return-password">Password</Label>
+                <Input
+                  id="return-password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Your password"
+                  value={returnPassword}
+                  onChange={(e) => setReturnPassword(e.target.value)}
+                  className="h-11"
+                />
+              </div>
             </div>
+            <Button
+              type="button"
+              className="mt-4 h-11 w-full sm:w-auto"
+              disabled={
+                returnBusy || !returnEmail.trim() || !returnPassword.trim()
+              }
+              onClick={() => void signInReturning()}
+            >
+              {returnBusy ? "Signing in…" : "Log in"}
+            </Button>
             {returnMessage ? (
-              <p className="mt-3 text-sm text-muted-foreground">{returnMessage}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {returnMessage}
+              </p>
             ) : null}
+            <div className="mt-4 border-t border-border pt-4">
+              <button
+                type="button"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                onClick={() => setShowReturnMagicLink((v) => !v)}
+              >
+                {showReturnMagicLink
+                  ? "Hide email link option"
+                  : "No password yet? Send a one-time email link"}
+              </button>
+              {showReturnMagicLink ? (
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <p className="text-xs text-muted-foreground sm:max-w-xs">
+                    For accounts created before passwords, or if you forgot
+                    yours and reset isn’t set up yet.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={returnBusy || !returnEmail.trim()}
+                    onClick={() => void sendReturningMagicLink()}
+                  >
+                    Email login link
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
@@ -210,7 +361,7 @@ export default function HeroRegistration({
                 Names on the wall
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Tap your name to get a magic login link.
+                Tap your name, then create your account with email and password.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {openBuddies.length === 0 ? (
@@ -229,7 +380,7 @@ export default function HeroRegistration({
                       }}
                       onClick={() => {
                         setPicked(b);
-                        setEmail("");
+                        resetJoinDialog();
                         setMessage(null);
                         setOpen(true);
                       }}
@@ -287,13 +438,20 @@ export default function HeroRegistration({
         ) : null}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) resetJoinDialog();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Join as {picked?.display_name}</DialogTitle>
             <DialogDescription>
-              Enter your email and we will send a magic link — no password to
-              remember.
+              {joinUseMagicLink
+                ? "We’ll email you a one-time link (no password)."
+                : `Use your email as your login ID. Choose a password (at least ${MIN_PASSWORD_LEN} characters).`}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -309,14 +467,62 @@ export default function HeroRegistration({
                 placeholder="you@example.com"
               />
             </div>
-            <Button
+            {!joinUseMagicLink ? (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="reg-password">Password</Label>
+                  <Input
+                    id="reg-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder={`At least ${MIN_PASSWORD_LEN} characters`}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="reg-password2">Confirm password</Label>
+                  <Input
+                    id="reg-password2"
+                    type="password"
+                    autoComplete="new-password"
+                    value={regPasswordConfirm}
+                    onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={
+                    busy ||
+                    !email.trim() ||
+                    regPassword.length < MIN_PASSWORD_LEN ||
+                    regPassword !== regPasswordConfirm
+                  }
+                  onClick={() => void registerWithPassword()}
+                >
+                  {busy ? "Creating account…" : "Create account & sign in"}
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                className="w-full"
+                disabled={busy || !email.trim()}
+                onClick={() => void sendJoinMagicLink()}
+              >
+                {busy ? "Sending…" : "Send magic link"}
+              </Button>
+            )}
+            <button
               type="button"
-              className="w-full"
-              disabled={busy || !email.trim()}
-              onClick={() => void sendMagicLink()}
+              className="text-center text-sm text-primary underline-offset-4 hover:underline"
+              onClick={() => setJoinUseMagicLink((x) => !x)}
             >
-              {busy ? "Sending…" : "Send magic link"}
-            </Button>
+              {joinUseMagicLink
+                ? "Use email + password instead"
+                : "Prefer a one-time email link?"}
+            </button>
           </div>
         </DialogContent>
       </Dialog>
