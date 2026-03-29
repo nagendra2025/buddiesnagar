@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import AvatarFallback from "@/components/shared/AvatarFallback";
 import { logger } from "@/lib/logger";
+import { userFacingAuthEmailError } from "@/lib/authEmailErrors";
 import {
   readPendingBuddy,
   savePendingBuddy,
@@ -151,8 +152,9 @@ export default function HeroRegistration({
     if (error) {
       logger.error("HeroRegistration", "signInWithOtp failed", {
         message: error.message,
+        code: error.code,
       });
-      setMessage("Could not send login email. Please try again.");
+      setMessage(userFacingAuthEmailError(error.message));
       return;
     }
     setOpen(false);
@@ -216,8 +218,9 @@ export default function HeroRegistration({
     if (error) {
       logger.error("HeroRegistration", "returning signInWithOtp failed", {
         message: error.message,
+        code: error.code,
       });
-      setReturnMessage("Could not send email. Check the address and try again.");
+      setReturnMessage(userFacingAuthEmailError(error.message));
       return;
     }
     setReturnMessage(
