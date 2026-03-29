@@ -44,13 +44,24 @@ function ConfigMissing() {
   );
 }
 
+/**
+ * One fact per calendar day, cycling through the list in stable order (created_at).
+ * After N facts, day N+1 shows fact #1 again — true round-robin across the year.
+ */
 function pickTodayFact(facts: FunFact[]): FunFact | null {
   if (facts.length === 0) return null;
-  const day = new Date();
-  const key =
-    (day.getFullYear() * 1000 + day.getMonth() * 50 + day.getDate()) %
-    facts.length;
-  return facts[key] ?? facts[0] ?? null;
+  const sorted = [...facts].sort((a, b) => {
+    const ta = a.created_at ? Date.parse(a.created_at) : 0;
+    const tb = b.created_at ? Date.parse(b.created_at) : 0;
+    if (ta !== tb) return ta - tb;
+    return a.id.localeCompare(b.id);
+  });
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  const today = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOfYear = Math.round((today.getTime() - start.getTime()) / 86400000);
+  const idx = (dayOfYear - 1) % sorted.length;
+  return sorted[idx] ?? sorted[0] ?? null;
 }
 
 export default async function Home() {
@@ -73,7 +84,7 @@ export default async function Home() {
     supabase.from("master_friends").select("*").order("display_name"),
     supabase.from("profiles").select("*").order("join_order", { ascending: true }),
     supabase.from("wishes").select("*").eq("is_active", true),
-    supabase.from("fun_facts").select("*"),
+    supabase.from("fun_facts").select("*").order("created_at", { ascending: true }),
     supabase.auth.getUser(),
   ]);
 

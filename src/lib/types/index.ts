@@ -45,6 +45,8 @@ export interface FunFact {
   category: string | null;
   show_date: string | null;
   reactions: Record<string, string>;
+  /** Used to order facts for the daily round-robin picker. */
+  created_at?: string;
 }
 
 export interface NewsArticle {
