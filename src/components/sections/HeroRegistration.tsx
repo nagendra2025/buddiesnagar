@@ -64,7 +64,7 @@ export default function HeroRegistration({
 
   useEffect(() => {
     let active = true;
-    if (!needsProfile || pendingMasterFriendId) {
+    if (!needsProfile) {
       queueMicrotask(() => {
         if (active) setRecoveredBuddy(null);
       });
@@ -84,7 +84,7 @@ export default function HeroRegistration({
     return () => {
       active = false;
     };
-  }, [needsProfile, pendingMasterFriendId, supabase]);
+  }, [needsProfile, supabase]);
 
   useEffect(() => {
     const channel = supabase
@@ -196,10 +196,33 @@ export default function HeroRegistration({
     router.refresh();
   }
 
-  const completionBuddyId =
-    pendingMasterFriendId ?? recoveredBuddy?.id ?? null;
+  /**
+   * JWT user_metadata can hold a stale/wrong UUID; localStorage can hold the
+   * id from the wall click. Pick the first id that still exists on master_friends
+   * and is not already registered.
+   */
+  const resolvedCompletionBuddy = useMemo(() => {
+    const tryId = (id: string | null | undefined) => {
+      if (!id) return null;
+      const row = initialOpen.find((b) => b.id === id);
+      if (!row || row.is_registered) return null;
+      return { id: row.id, fullName: row.display_name };
+    };
+    return (
+      tryId(pendingMasterFriendId) ?? tryId(recoveredBuddy?.id) ?? null
+    );
+  }, [
+    initialOpen,
+    pendingMasterFriendId,
+    recoveredBuddy?.id,
+  ]);
+
+  const completionBuddyId = resolvedCompletionBuddy?.id ?? null;
   const completionBuddyName =
-    pendingFullName ?? recoveredBuddy?.fullName ?? "";
+    resolvedCompletionBuddy?.fullName ??
+    pendingFullName ??
+    recoveredBuddy?.fullName ??
+    "";
 
   async function sendReturningMagicLink() {
     if (!returnEmail.trim()) return;

@@ -85,16 +85,19 @@ export async function POST(request: Request) {
       message: error.message,
       code: error.code,
     });
+    const rawMsg = error.message ?? "";
     const map: Record<string, string> = {
       NOT_AUTHENTICATED: "Unauthorized",
       PROFILE_EXISTS: "Profile already completed",
       NO_EMAIL: "Account email missing",
-      INVALID_BUDDY: "Invalid buddy selection",
+      INVALID_BUDDY:
+        "Your wall name could not be matched (this is not a password problem). Refresh the page, or log out and tap your name on the wall again, then use the email link once more.",
       ALREADY_REGISTERED: "That name is already taken",
       INVALID_BIRTHDAY: "Invalid birthday",
       INVALID_NAME: "First name, last name, and nickname are required",
     };
-    const msg = map[error.message] ?? "Could not complete registration";
+    const key = Object.keys(map).find((k) => rawMsg.includes(k)) ?? null;
+    const msg = key ? map[key]! : "Could not complete registration";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
