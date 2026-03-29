@@ -101,7 +101,8 @@ export default async function Home() {
     typeof meta?.master_friend_id === "string" ? meta.master_friend_id : null;
   const pendingFullName =
     typeof meta?.full_name === "string" ? meta.full_name : null;
-  const needsProfile = Boolean(user && !myProfile && pendingMasterFriendId);
+  /** Any signed-in user without a row in `profiles` still needs the full details form. */
+  const needsProfile = Boolean(user && !myProfile);
 
   const openFriends = (masterFriends ?? []) as MasterFriend[];
   const joined = (profiles ?? []) as Profile[];

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { logger } from "@/lib/logger";
+import { clearPendingBuddy } from "@/lib/pendingBuddyRegistration";
 
 function splitDefaultName(displayName: string): { first: string; last: string } {
   const t = displayName.trim();
@@ -112,6 +113,7 @@ export default function ProfileCompletionForm({
         setBusy(false);
         return;
       }
+      clearPendingBuddy();
       router.refresh();
     } catch (err) {
       logger.error("ProfileCompletionForm", "submit failed", {

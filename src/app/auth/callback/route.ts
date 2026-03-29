@@ -5,7 +5,10 @@ import { logger } from "@/lib/logger";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/";
+  const nextParam = url.searchParams.get("next") ?? "/";
+  /** After email link, land on home and scroll to the profile completion card. */
+  const next =
+    nextParam === "/" || nextParam === "" ? "/#finish-profile" : nextParam;
 
   if (!code) {
     return NextResponse.redirect(`${url.origin}/?auth=missing_code`);
@@ -21,5 +24,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${url.origin}/?auth=error`);
   }
 
-  return NextResponse.redirect(`${url.origin}${next}`);
+  const path = next.startsWith("/") ? next : `/${next}`;
+  return NextResponse.redirect(new URL(path, url.origin).toString());
 }

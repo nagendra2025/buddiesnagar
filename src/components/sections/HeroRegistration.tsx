@@ -17,6 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import AvatarFallback from "@/components/shared/AvatarFallback";
 import { logger } from "@/lib/logger";
+import {
+  readPendingBuddy,
+  savePendingBuddy,
+} from "@/lib/pendingBuddyRegistration";
 import ProfileCompletionForm from "@/components/shared/ProfileCompletionForm";
 
 const MIN_PASSWORD_LEN = 8;
@@ -55,8 +59,36 @@ export default function HeroRegistration({
   const [returnBusy, setReturnBusy] = useState(false);
   const [returnMessage, setReturnMessage] = useState<string | null>(null);
   const [showReturnMagicLink, setShowReturnMagicLink] = useState(false);
+  const [recoveredBuddy, setRecoveredBuddy] = useState<{
+    id: string;
+    fullName: string;
+  } | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    let active = true;
+    if (!needsProfile || pendingMasterFriendId) {
+      queueMicrotask(() => {
+        if (active) setRecoveredBuddy(null);
+      });
+      return () => {
+        active = false;
+      };
+    }
+    void supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (!active || !u?.email) return;
+      const stored = readPendingBuddy();
+      if (!stored || stored.email !== u.email.trim().toLowerCase()) return;
+      setRecoveredBuddy({
+        id: stored.master_friend_id,
+        fullName: stored.full_name,
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [needsProfile, pendingMasterFriendId, supabase]);
 
   useEffect(() => {
     const channel = supabase
@@ -115,8 +147,9 @@ export default function HeroRegistration({
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
     const redirect = `${origin}/auth/callback`;
+    const emailNorm = email.trim().toLowerCase();
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
+      email: emailNorm,
       password: regPassword,
       options: {
         emailRedirectTo: redirect,
@@ -145,16 +178,21 @@ export default function HeroRegistration({
       }
       return;
     }
+    savePendingBuddy({
+      master_friend_id: picked.id,
+      full_name: picked.display_name,
+      email: emailNorm,
+    });
     setOpen(false);
     resetJoinDialog();
     if (data.session) {
       setMessage(
-        "You’re signed in. Complete your profile below if you see the form.",
+        "You’re signed in. Complete your profile in the green card below.",
       );
       router.refresh();
     } else {
       setMessage(
-        "Confirm the email we sent you (one time). After that, use “Back again?” with your email and password.",
+        "We sent a Confirm your signup email (subject may say “Confirm” from your sender). Open it, tap the link once, then come back and use “Back again?” with the same email and password. Check Spam / Promotions if you don’t see it.",
       );
     }
   }
@@ -166,8 +204,14 @@ export default function HeroRegistration({
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
     const redirect = `${origin}/auth/callback`;
+    const emailNorm = email.trim().toLowerCase();
+    savePendingBuddy({
+      master_friend_id: picked.id,
+      full_name: picked.display_name,
+      email: emailNorm,
+    });
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
+      email: emailNorm,
       options: {
         emailRedirectTo: redirect,
         data: {
@@ -186,7 +230,9 @@ export default function HeroRegistration({
     }
     setOpen(false);
     resetJoinDialog();
-    setMessage("Check your inbox for the BuddyNagar login link.");
+    setMessage(
+      "Check your inbox for Your Magic Link (from Supabase / your sender). Open the link on this device — then finish your profile in the green card at the top.",
+    );
   }
 
   async function signInReturning() {
@@ -220,6 +266,11 @@ export default function HeroRegistration({
     setReturnMessage(null);
     router.refresh();
   }
+
+  const completionBuddyId =
+    pendingMasterFriendId ?? recoveredBuddy?.id ?? null;
+  const completionBuddyName =
+    pendingFullName ?? recoveredBuddy?.fullName ?? "";
 
   async function sendReturningMagicLink() {
     if (!returnEmail.trim()) return;
@@ -353,12 +404,33 @@ export default function HeroRegistration({
           </div>
         ) : null}
 
-        {needsProfile && pendingMasterFriendId ? (
-          <ProfileCompletionForm
-            masterFriendId={pendingMasterFriendId}
-            defaultFullName={pendingFullName ?? ""}
-            accountEmail={(pendingAccountEmail ?? "").trim()}
-          />
+        {needsProfile ? (
+          completionBuddyId ? (
+            <div id="finish-profile">
+              <ProfileCompletionForm
+                masterFriendId={completionBuddyId}
+                defaultFullName={completionBuddyName}
+                accountEmail={(pendingAccountEmail ?? "").trim()}
+              />
+            </div>
+          ) : (
+            <Card
+              id="finish-profile"
+              className="border-amber-500/40 bg-amber-500/5"
+            >
+              <CardContent className="pt-6 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">
+                  We need one more thing to finish signup
+                </p>
+                <p className="mt-2">
+                  Your account is open, but we couldn’t tell which wall name you
+                  picked (often happens after only using email links). Sign out,
+                  then tap your name on the wall again and use the same email —
+                  or ask the site admin to link your account.
+                </p>
+              </CardContent>
+            </Card>
+          )
         ) : null}
 
         <div className="grid gap-8 md:grid-cols-2">
@@ -457,8 +529,8 @@ export default function HeroRegistration({
             <DialogTitle>Join as {picked?.display_name}</DialogTitle>
             <DialogDescription>
               {joinUseMagicLink
-                ? "We’ll email you a one-time link (no password)."
-                : `Use your email as your login ID. Choose a password (at least ${MIN_PASSWORD_LEN} characters).`}
+                ? "We’ll email a magic link (subject often says “Magic Link”). No password. After you open the link, fill in your full profile on the page."
+                : `Use your email as your login ID. Choose a password (at least ${MIN_PASSWORD_LEN} characters). After signup you’ll fill in name and birthday on the page — not in this box.`}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
