@@ -147,8 +147,8 @@ export default function CinemaNewsSection({
               Cinema buzz
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Telugu screens and beyond — posts from admins and cinema posters. Each post is removed
-              automatically 100 hours after it was published.
+              Telugu screens and beyond — posts from the gang. Each post is removed automatically
+              100 hours after it was published.
             </p>
           </div>
           {canPost ? (
@@ -158,22 +158,15 @@ export default function CinemaNewsSection({
               onClick={() => setOpen(true)}
             >
               <Clapperboard className="h-4 w-4" aria-hidden />
-              Post update
+              Post a buzz
             </Button>
-          ) : userId ? (
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Only{" "}
-              <span className="font-medium text-foreground">admins</span> and{" "}
-              <span className="font-medium text-foreground">cinema posters</span>{" "}
-              can publish here. Ask an admin if you need the cinema poster role.
-            </p>
           ) : (
             <p className="max-w-sm text-sm text-muted-foreground">
               <a href="#sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
                 Get login link
               </a>
               {" — "}
-              same email as before. Cinema posts need admin or cinema poster role.
+              use your registered email to post a buzz.
             </p>
           )}
         </div>
@@ -255,7 +248,7 @@ export default function CinemaNewsSection({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New cinema post</DialogTitle>
+            <DialogTitle>New cinema buzz</DialogTitle>
             <DialogDescription>
               Image optional. Visible to everyone once saved.
             </DialogDescription>

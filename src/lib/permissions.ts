@@ -9,9 +9,9 @@ export function isAdmin(p: Profile | null): boolean {
   return roleList(p).includes("admin");
 }
 
-export function canPostCinema(p: Profile | null): boolean {
-  const r = roleList(p);
-  return r.includes("admin") || r.includes("cinema_poster");
+/** Any signed-in user may post cinema buzz (RLS requires a `profiles` row and `posted_by = auth.uid()`). */
+export function canPostCinema(userId: string | null): boolean {
+  return userId != null;
 }
 
 /** Any signed-in user may post poetry (RLS still requires `posted_by = auth.uid()`). */

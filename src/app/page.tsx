@@ -240,7 +240,7 @@ export default async function Home() {
         <CinemaNewsSection
           initialItems={cinemaItems}
           userId={user?.id ?? null}
-          canPost={canPostCinema(myProfile)}
+          canPost={canPostCinema(user?.id ?? null)}
           likedIds={likedCinema}
         />
         <PoetryWallSection
