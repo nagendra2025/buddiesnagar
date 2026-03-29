@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -44,6 +44,15 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
   const [caption, setCaption] = useState("");
   const [poetName, setPoetName] = useState("");
   const [language, setLanguage] = useState<PoetryLanguage>("Telugu");
+  const [postError, setPostError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
+  useEffect(() => {
+    setLiked(new Set(initialLiked));
+  }, [initialLiked]);
 
   const filtered = useMemo(() => {
     if (filter === "All") return items;
@@ -64,6 +73,7 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
   async function submitPoem() {
     if (!userId || !file) return;
     setBusy(true);
+    setPostError(null);
     try {
       const supabase = createClient();
       const path = userId + "/" + Date.now() + "-" + safeStorageFileName(file.name);
@@ -72,7 +82,12 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
         .upload(path, file, { upsert: false });
       if (upErr) {
         logger.error("PoetryWallSection", "upload failed", { message: upErr.message });
-        setBusy(false);
+        setPostError(
+          upErr.message.toLowerCase().includes("row-level security") ||
+            upErr.message.toLowerCase().includes("policy")
+            ? "Upload blocked (storage). Check you are logged in, or ask an admin to verify Supabase storage policies."
+            : upErr.message,
+        );
         return;
       }
       const { data: pub } = supabase.storage.from("buddynagar-poetry").getPublicUrl(path);
@@ -90,7 +105,12 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
         .single();
       if (error) {
         logger.error("PoetryWallSection", "insert failed", { message: error.message });
-        setBusy(false);
+        const low = error.message.toLowerCase();
+        setPostError(
+          low.includes("row-level security") || low.includes("policy")
+            ? "Posting is blocked for your account. Ask an admin to run migration 016_poetry_insert_any_member.sql on Supabase (any member can post after that)."
+            : error.message,
+        );
         return;
       }
       if (row) setItems((prev) => [row as PoetryWallRow, ...prev]);
@@ -262,8 +282,13 @@ export default function PoetryWallSection(props: PoetryWallSectionProps) {
                 ))}
               </select>
             </div>
+            {postError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {postError}
+              </p>
+            ) : null}
             <Button type="button" disabled={busy || !file} onClick={() => void submitPoem()}>
-              {busy ? "Posting" : "Post"}
+              {busy ? "Posting…" : "Post"}
             </Button>
           </div>
         </DialogContent>

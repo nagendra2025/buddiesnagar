@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { GalleryPhotoRow } from "@/lib/types";
@@ -44,6 +44,15 @@ export default function MemoryLaneSection({
   const [caption, setCaption] = useState("");
   const [yearApprox, setYearApprox] = useState("");
   const [lightbox, setLightbox] = useState<GalleryPhotoRow | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
+  useEffect(() => {
+    setLiked(new Set(initialLiked));
+  }, [initialLiked]);
 
   async function onLike(id: string) {
     if (!userId || liked.has(id)) return;
@@ -59,18 +68,20 @@ export default function MemoryLaneSection({
   async function submitMemory() {
     if (!userId || !file) return;
     setBusy(true);
+    setSubmitError(null);
     try {
       const fd = new FormData();
       fd.set("file", file);
       fd.set("caption", caption.trim());
       fd.set("yearApprox", yearApprox.trim());
       const res = await fetch("/api/gallery/submit", { method: "POST", body: fd });
+      const err = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        const err = (await res.json().catch(() => null)) as { error?: string } | null;
         logger.error("MemoryLaneSection", "submit failed", {
           status: res.status,
           message: err?.error,
         });
+        setSubmitError(err?.error ?? `Could not submit (HTTP ${res.status}).`);
         return;
       }
       setOpen(false);
@@ -78,6 +89,11 @@ export default function MemoryLaneSection({
       setCaption("");
       setYearApprox("");
       router.refresh();
+    } catch (e) {
+      logger.error("MemoryLaneSection", "submit network error", {
+        message: e instanceof Error ? e.message : "unknown",
+      });
+      setSubmitError("Network error — try again.");
     } finally {
       setBusy(false);
     }
@@ -271,7 +287,13 @@ export default function MemoryLaneSection({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setSubmitError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add a memory</DialogTitle>
@@ -304,6 +326,11 @@ export default function MemoryLaneSection({
                 onChange={(e) => setYearApprox(e.target.value)}
               />
             </div>
+            {submitError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {submitError}
+              </p>
+            ) : null}
             <Button type="button" disabled={busy || !file} onClick={() => void submitMemory()}>
               {busy ? "Uploading…" : "Submit for approval"}
             </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -57,6 +57,15 @@ export default function CinemaNewsSection({
   const [industry, setIndustry] = useState<CinemaIndustry>("Telugu");
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [postError, setPostError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
+  useEffect(() => {
+    setLiked(new Set(initialLiked));
+  }, [initialLiked]);
 
   const filtered = useMemo(() => {
     if (filter === "All") return items;
@@ -84,6 +93,7 @@ export default function CinemaNewsSection({
   async function submitPost() {
     if (!userId || !title.trim()) return;
     setBusy(true);
+    setPostError(null);
     try {
       const supabase = createClient();
       let imageUrl: string | null = null;
@@ -96,7 +106,12 @@ export default function CinemaNewsSection({
           logger.error("CinemaNewsSection", "upload failed", {
             message: upErr.message,
           });
-          setBusy(false);
+          const low = upErr.message.toLowerCase();
+          setPostError(
+            low.includes("row-level security") || low.includes("policy")
+              ? "Image upload blocked. Log in again, or ask an admin to check storage policies for buddynagar-cinema."
+              : upErr.message,
+          );
           return;
         }
         const { data: pub } = supabase.storage
@@ -121,7 +136,12 @@ export default function CinemaNewsSection({
         logger.error("CinemaNewsSection", "insert failed", {
           message: error.message,
         });
-        setBusy(false);
+        const low = error.message.toLowerCase();
+        setPostError(
+          low.includes("row-level security") || low.includes("policy")
+            ? "Post blocked (database rules). Ask an admin to run migration 012_cinema_insert_any_member.sql if regular members cannot post."
+            : error.message,
+        );
         return;
       }
       if (row) {
@@ -245,7 +265,13 @@ export default function CinemaNewsSection({
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setPostError(null);
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New cinema buzz</DialogTitle>
@@ -309,6 +335,11 @@ export default function CinemaNewsSection({
                 }
               />
             </div>
+            {postError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {postError}
+              </p>
+            ) : null}
             <Button
               type="button"
               disabled={busy || !title.trim()}

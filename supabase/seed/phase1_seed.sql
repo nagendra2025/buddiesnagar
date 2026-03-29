@@ -10,7 +10,8 @@ from (values
   ('VidyaSagar P'),
   ('Khader Basha'),
   ('Srini Pen'),
-  ('Sreenu Bandi')
+  ('Sreenu Bandi'),
+  ('Nagaraj')
 ) as v(name)
 where not exists (
   select 1 from public.master_friends mf where mf.display_name = v.name
