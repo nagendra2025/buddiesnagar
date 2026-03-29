@@ -185,3 +185,47 @@ Also keep `docs/phasewise.md` in sync when work maps to a PRD phase; this file i
 **Files:** `src/components/sections/HeroRegistration.tsx`, `src/components/shared/SiteNavAuth.tsx`, `src/components/shared/SiteNav.tsx`, `README.md`
 
 ---
+
+## 2026-03-29 — Profile completion: mandatory names, nickname, full birth date
+
+**Requested:** First-time profile step should require password (already collected on account creation), email ID (shown read-only from auth), first/last name, nickname, birth month/day/year, with location optional.
+
+**Changes:**
+
+- **Migration `010_profile_names_nickname_birthyear.sql`:** columns `first_name`, `last_name`, `nickname`, `birthday_year`; `complete_registration` replaced to accept those fields, validate calendar dates via `make_date`, and set `full_name` to `first_name || ' ' || last_name`.
+- **`ProfileCompletionForm`:** read-only email, required first/last/nickname/birth month-day-year; location (city) and phone/bio optional; copy explains password was set when creating the account.
+- **`POST /api/profile/complete`:** Zod + RPC wiring for new payload.
+
+**Files:** `supabase/migrations/010_profile_names_nickname_birthyear.sql`, `src/components/shared/ProfileCompletionForm.tsx`, `src/app/api/profile/complete/route.ts`, `src/lib/types/index.ts`, `src/components/sections/HeroRegistration.tsx`, `src/app/page.tsx`, `README.md`, `docs/issue-fix-log.md`
+
+---
+
+## 2026-03-29 — Spotlight: birthdays + all festival/special wishes same day
+
+**Requested:** Show birthday wishes for the whole day when a member’s birthday matches; show festival/special days in the same card, combined creatively.
+
+**Fix:** `SpotlightSection` no longer uses `else if` between birthdays and wishes. It collects **all** `wishes` rows matching today (`wishMatchesToday`), renders a **birthday panel** (avatars, nickname preference, warm copy) when any profile matches month/day, then an **“Also on the calendar”** divider and **one block per matching wish** (type badge, emoji, title, message, optional `banner_color` accent). Quiet state explains adding rows to `wishes`.
+
+**Files:** `src/components/sections/SpotlightSection.tsx`, `docs/issue-fix-log.md`
+
+---
+
+## 2026-03-29 — Wishes seed: Indian festivals & national/special days
+
+**Requested:** Populate `wishes` so Spotlight can show famous Indian festivals and special days alongside birthdays.
+
+**Change:** Migration `011_indian_festivals_wishes.sql` inserts ~23 idempotent rows (`where not exists` on `title`): New Year, Sankranti/Pongal, Republic Day, Women’s Day, Holi, Ugadi/Gudi Padwa, Ram Navami, Ambedkar Jayanti, Labour Day, Yoga Day, Guru Purnima, Independence Day, Rakhi, Janmashtami, Teachers’ Day, Ganesh Chaturthi, Onam, Gandhi Jayanti, Dussehra, Diwali, Children’s Day, Guru Nanak Jayanti, Christmas. Header comment notes lunar-date drift; Spotlight badge supports `national` type.
+
+**Files:** `supabase/migrations/011_indian_festivals_wishes.sql`, `src/components/sections/SpotlightSection.tsx`, `README.md`, `docs/issue-fix-log.md`
+
+---
+
+## 2026-03-29 — “Back again?” card: compact layout + Log in beside password
+
+**Requested:** Log in button immediately after password field; reduce wasted card width/height (~half feel); pre-deploy checks.
+
+**Changes:** Sign-in card uses `max-w-lg`, tighter padding/copy; **Email | Password | Log in** on one row from `sm` breakpoint (`flex` + `items-end`); smaller labels/inputs (`h-10`, `text-xs`); condensed magic-link footer. **Lint:** `NewsSection` category fetch deferred with `setTimeout(0)` to satisfy `react-hooks/set-state-in-effect`; `InputProps` as `type` alias for `@typescript-eslint/no-empty-object-type`.
+
+**Files:** `src/components/sections/HeroRegistration.tsx`, `src/components/sections/NewsSection.tsx`, `src/components/ui/input.tsx`, `docs/issue-fix-log.md`
+
+---

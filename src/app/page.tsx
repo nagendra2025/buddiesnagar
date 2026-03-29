@@ -230,6 +230,7 @@ export default async function Home() {
           pendingFullName={pendingFullName}
           needsProfile={needsProfile}
           isSignedIn={Boolean(user)}
+          pendingAccountEmail={user?.email ?? null}
         />
         <ProfilesSection profiles={joined} />
         <SpotlightSection profiles={joined} wishes={wishList} />

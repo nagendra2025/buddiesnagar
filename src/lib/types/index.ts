@@ -3,6 +3,9 @@ export type BuddyRole = "member" | "admin" | "cinema_poster" | "poetry_poster";
 export interface Profile {
   id: string;
   full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  nickname?: string | null;
   email: string;
   phone: string | null;
   avatar_url: string | null;
@@ -10,6 +13,7 @@ export interface Profile {
   bio: string | null;
   birthday_month: number | null;
   birthday_day: number | null;
+  birthday_year?: number | null;
   roles: BuddyRole[] | string[];
   join_order: number | null;
   joined_at: string;

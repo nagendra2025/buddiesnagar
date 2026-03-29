@@ -5,7 +5,7 @@ Private SPA for the Kadapa Buddies — **Phase 1** covers registration, profiles
 ## Setup
 
 1. Copy `.env.example` to `.env.local` and fill in Supabase keys (and optional `NEWS_API_KEY`). For gallery admin email alerts, add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `GALLERY_NOTIFY_EMAIL`.
-2. In the Supabase SQL editor, run migrations in order: `001_phase1_schema.sql`, `002_phase2_schema.sql`, `003_gallery_admin_rls.sql`, `004_gallery_pending_private_storage.sql`, `005_master_friends_display_names.sql`, `006_master_friend_nagendra_name.sql`, `007_nagendrakumar_adapala_names.sql`, `008_content_delete_admin_only.sql`, then `supabase/seed/phase1_seed.sql`.
+2. In the Supabase SQL editor, run migrations in order: `001_phase1_schema.sql`, `002_phase2_schema.sql`, `003_gallery_admin_rls.sql`, `004_gallery_pending_private_storage.sql`, `005_master_friends_display_names.sql`, `006_master_friend_nagendra_name.sql`, `007_nagendrakumar_adapala_names.sql`, `008_content_delete_admin_only.sql`, `009_master_friend_nagendrakumar_a.sql`, `010_profile_names_nickname_birthyear.sql`, `011_indian_festivals_wishes.sql`, then `supabase/seed/phase1_seed.sql`.
 3. Grant roles in SQL as needed, e.g. `update public.profiles set roles = array['member','admin'] where email = 'you@example.com';` and `cinema_poster` for cinema-only posters. (`poetry_poster` is unused for the post button — any signed-in user can post poetry.)
 4. **Auth:** In Supabase → Authentication → URL configuration, add redirect URLs:
    - `http://localhost:3000/auth/callback`

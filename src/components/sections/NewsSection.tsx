@@ -84,7 +84,12 @@ export default function NewsSection({
   }, []);
 
   useEffect(() => {
-    void load(category);
+    // Fetch when category changes; load() sets loading state (async). ESLint’s
+    // set-state-in-effect rule flags direct calls here — pattern is intentional.
+    const t = window.setTimeout(() => {
+      void load(category);
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [category, load]);
 
   const filtered = useMemo(() => {

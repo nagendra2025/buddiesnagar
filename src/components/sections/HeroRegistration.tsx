@@ -28,6 +28,7 @@ interface HeroRegistrationProps {
   pendingFullName: string | null;
   needsProfile: boolean;
   isSignedIn?: boolean;
+  pendingAccountEmail?: string | null;
 }
 
 export default function HeroRegistration({
@@ -37,6 +38,7 @@ export default function HeroRegistration({
   pendingFullName,
   needsProfile,
   isSignedIn = false,
+  pendingAccountEmail = null,
 }: HeroRegistrationProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -264,18 +266,21 @@ export default function HeroRegistration({
         {!isSignedIn ? (
           <div
             id="sign-in"
-            className="scroll-mt-24 rounded-xl border border-primary/25 bg-card p-4 shadow-sm md:p-5"
+            className="scroll-mt-24 w-full max-w-lg rounded-xl border border-primary/25 bg-card p-3 shadow-sm md:p-4"
           >
-            <p className="font-display text-lg font-semibold text-foreground">
+            <p className="font-display text-base font-semibold text-foreground">
               Back again?
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Log in with the email and password you chose when you joined. New
-              buddy? Pick your name under “Names on the wall” instead.
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Email + password from when you joined. New here? Use{" "}
+              <span className="font-medium text-foreground">Names on the wall</span>{" "}
+              below.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-2 sm:col-span-1">
-                <Label htmlFor="return-email">Email</Label>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label htmlFor="return-email" className="text-xs">
+                  Email
+                </Label>
                 <Input
                   id="return-email"
                   type="email"
@@ -284,11 +289,13 @@ export default function HeroRegistration({
                   placeholder="you@example.com"
                   value={returnEmail}
                   onChange={(e) => setReturnEmail(e.target.value)}
-                  className="h-11"
+                  className="h-10"
                 />
               </div>
-              <div className="grid gap-2 sm:col-span-1">
-                <Label htmlFor="return-password">Password</Label>
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label htmlFor="return-password" className="text-xs">
+                  Password
+                </Label>
                 <Input
                   id="return-password"
                   type="password"
@@ -296,29 +303,29 @@ export default function HeroRegistration({
                   placeholder="Your password"
                   value={returnPassword}
                   onChange={(e) => setReturnPassword(e.target.value)}
-                  className="h-11"
+                  className="h-10"
                 />
               </div>
+              <Button
+                type="button"
+                className="h-10 w-full shrink-0 px-5 sm:mt-0 sm:w-auto"
+                disabled={
+                  returnBusy || !returnEmail.trim() || !returnPassword.trim()
+                }
+                onClick={() => void signInReturning()}
+              >
+                {returnBusy ? "Signing in…" : "Log in"}
+              </Button>
             </div>
-            <Button
-              type="button"
-              className="mt-4 h-11 w-full sm:w-auto"
-              disabled={
-                returnBusy || !returnEmail.trim() || !returnPassword.trim()
-              }
-              onClick={() => void signInReturning()}
-            >
-              {returnBusy ? "Signing in…" : "Log in"}
-            </Button>
             {returnMessage ? (
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {returnMessage}
               </p>
             ) : null}
-            <div className="mt-4 border-t border-border pt-4">
+            <div className="mt-3 border-t border-border pt-3">
               <button
                 type="button"
-                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                className="text-xs font-medium text-primary underline-offset-4 hover:underline"
                 onClick={() => setShowReturnMagicLink((v) => !v)}
               >
                 {showReturnMagicLink
@@ -326,16 +333,15 @@ export default function HeroRegistration({
                   : "No password yet? Send a one-time email link"}
               </button>
               {showReturnMagicLink ? (
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <p className="text-xs text-muted-foreground sm:max-w-xs">
-                    For accounts created before passwords, or if you forgot
-                    yours and reset isn’t set up yet.
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    For older accounts or if you forgot your password.
                   </p>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-9 shrink-0 self-start sm:self-auto"
                     disabled={returnBusy || !returnEmail.trim()}
                     onClick={() => void sendReturningMagicLink()}
                   >
@@ -347,12 +353,13 @@ export default function HeroRegistration({
           </div>
         ) : null}
 
-        {needsProfile && pendingMasterFriendId && (
+        {needsProfile && pendingMasterFriendId ? (
           <ProfileCompletionForm
             masterFriendId={pendingMasterFriendId}
             defaultFullName={pendingFullName ?? ""}
+            accountEmail={(pendingAccountEmail ?? "").trim()}
           />
-        )}
+        ) : null}
 
         <div className="grid gap-8 md:grid-cols-2">
           <Card className="border-dashed">

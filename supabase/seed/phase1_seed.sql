@@ -4,6 +4,7 @@ insert into public.master_friends (display_name, is_registered)
 select v.name, false
 from (values
   ('Nagendrakumar Adapala'),
+  ('Nagendrakumar A'),
   ('Harishkumar K'),
   ('Sreekanth C'),
   ('VidyaSagar P'),
