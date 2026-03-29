@@ -23,8 +23,6 @@ import {
 } from "@/lib/pendingBuddyRegistration";
 import ProfileCompletionForm from "@/components/shared/ProfileCompletionForm";
 
-const MIN_PASSWORD_LEN = 8;
-
 interface HeroRegistrationProps {
   initialOpen: MasterFriend[];
   initialJoined: Profile[];
@@ -48,9 +46,6 @@ export default function HeroRegistration({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<MasterFriend | null>(null);
   const [email, setEmail] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-  const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
-  const [joinUseMagicLink, setJoinUseMagicLink] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [joined, setJoined] = useState<Profile[]>(initialJoined);
@@ -127,74 +122,6 @@ export default function HeroRegistration({
 
   function resetJoinDialog() {
     setEmail("");
-    setRegPassword("");
-    setRegPasswordConfirm("");
-    setJoinUseMagicLink(false);
-  }
-
-  async function registerWithPassword() {
-    if (!picked || !email.trim()) return;
-    if (regPassword.length < MIN_PASSWORD_LEN) {
-      setMessage(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
-      return;
-    }
-    if (regPassword !== regPasswordConfirm) {
-      setMessage("Passwords do not match.");
-      return;
-    }
-    setBusy(true);
-    setMessage(null);
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    const redirect = `${origin}/auth/callback`;
-    const emailNorm = email.trim().toLowerCase();
-    const { data, error } = await supabase.auth.signUp({
-      email: emailNorm,
-      password: regPassword,
-      options: {
-        emailRedirectTo: redirect,
-        data: {
-          master_friend_id: picked.id,
-          full_name: picked.display_name,
-        },
-      },
-    });
-    setBusy(false);
-    if (error) {
-      logger.error("HeroRegistration", "signUp failed", {
-        message: error.message,
-      });
-      const msg = error.message.toLowerCase();
-      if (
-        msg.includes("already") ||
-        msg.includes("registered") ||
-        msg.includes("exists")
-      ) {
-        setMessage(
-          "That email already has an account. Close this dialog and use “Back again?” to log in.",
-        );
-      } else {
-        setMessage(error.message || "Could not create account. Try again.");
-      }
-      return;
-    }
-    savePendingBuddy({
-      master_friend_id: picked.id,
-      full_name: picked.display_name,
-      email: emailNorm,
-    });
-    setOpen(false);
-    resetJoinDialog();
-    if (data.session) {
-      setMessage(
-        "You’re signed in. Complete your profile in the green card below.",
-      );
-      router.refresh();
-    } else {
-      setMessage(
-        "We sent a Confirm your signup email (subject may say “Confirm” from your sender). Open it, tap the link once, then come back and use “Back again?” with the same email and password. Check Spam / Promotions if you don’t see it.",
-      );
-    }
   }
 
   async function sendJoinMagicLink() {
@@ -231,7 +158,7 @@ export default function HeroRegistration({
     setOpen(false);
     resetJoinDialog();
     setMessage(
-      "Check your inbox for Your Magic Link (from Supabase / your sender). Open the link on this device — then finish your profile in the green card at the top.",
+      "Check your inbox for the sign-in link (often titled “Magic Link”). Open it on this device — then you’ll set your password and full profile in one form at the top. Check Spam / Promotions if needed.",
     );
   }
 
@@ -255,7 +182,7 @@ export default function HeroRegistration({
         low.includes("password")
       ) {
         setReturnMessage(
-          "Wrong email or password. If you joined before passwords existed, expand “No password yet?” and use a one-time email link.",
+          "Wrong email or password. Use “Forgot password?” below for a one-time email link, or the same email and password you saved when you finished your profile.",
         );
       } else {
         setReturnMessage(error.message);
@@ -323,9 +250,9 @@ export default function HeroRegistration({
               Back again?
             </p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Email + password from when you joined. New here? Use{" "}
-              <span className="font-medium text-foreground">Names on the wall</span>{" "}
-              below.
+              Use the email and password you chose when you completed your
+              profile after the email link. New here? Tap your name under{" "}
+              <span className="font-medium text-foreground">Names on the wall</span>.
             </p>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
               <div className="min-w-0 flex-1 space-y-1">
@@ -381,12 +308,13 @@ export default function HeroRegistration({
               >
                 {showReturnMagicLink
                   ? "Hide email link option"
-                  : "No password yet? Send a one-time email link"}
+                  : "Forgot password? Send a one-time email link"}
               </button>
               {showReturnMagicLink ? (
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <p className="text-xs text-muted-foreground">
-                    For older accounts or if you forgot your password.
+                    We’ll email a link to sign in without your password for this
+                    session.
                   </p>
                   <Button
                     type="button"
@@ -440,7 +368,9 @@ export default function HeroRegistration({
                 Names on the wall
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Tap your name, then create your account with email and password.
+                Tap your name, enter your email, and we’ll send a confirmation
+                link. After you open it, you’ll set your password and profile in
+                one step.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {openBuddies.length === 0 ? (
@@ -528,9 +458,9 @@ export default function HeroRegistration({
           <DialogHeader>
             <DialogTitle>Join as {picked?.display_name}</DialogTitle>
             <DialogDescription>
-              {joinUseMagicLink
-                ? "We’ll email a magic link (subject often says “Magic Link”). No password. After you open the link, fill in your full profile on the page."
-                : `Use your email as your login ID. Choose a password (at least ${MIN_PASSWORD_LEN} characters). After signup you’ll fill in name and birthday on the page — not in this box.`}
+              Enter the email you want as your login ID. We’ll send a link to
+              confirm it — then you’ll choose a password and fill in your full
+              profile on the next screen (nothing else to fill in here).
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -546,62 +476,19 @@ export default function HeroRegistration({
                 placeholder="you@example.com"
               />
             </div>
-            {!joinUseMagicLink ? (
-              <>
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <Input
-                    id="reg-password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder={`At least ${MIN_PASSWORD_LEN} characters`}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-password2">Confirm password</Label>
-                  <Input
-                    id="reg-password2"
-                    type="password"
-                    autoComplete="new-password"
-                    value={regPasswordConfirm}
-                    onChange={(e) => setRegPasswordConfirm(e.target.value)}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  className="w-full"
-                  disabled={
-                    busy ||
-                    !email.trim() ||
-                    regPassword.length < MIN_PASSWORD_LEN ||
-                    regPassword !== regPasswordConfirm
-                  }
-                  onClick={() => void registerWithPassword()}
-                >
-                  {busy ? "Creating account…" : "Create account & sign in"}
-                </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                className="w-full"
-                disabled={busy || !email.trim()}
-                onClick={() => void sendJoinMagicLink()}
-              >
-                {busy ? "Sending…" : "Send magic link"}
-              </Button>
-            )}
-            <button
+            <Button
               type="button"
-              className="text-center text-sm text-primary underline-offset-4 hover:underline"
-              onClick={() => setJoinUseMagicLink((x) => !x)}
+              className="w-full"
+              disabled={busy || !email.trim()}
+              onClick={() => void sendJoinMagicLink()}
             >
-              {joinUseMagicLink
-                ? "Use email + password instead"
-                : "Prefer a one-time email link?"}
-            </button>
+              {busy ? "Sending…" : "Send confirmation link"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Already on the gang? Close this and use{" "}
+              <span className="font-medium text-foreground">Back again?</span>{" "}
+              above.
+            </p>
           </div>
         </DialogContent>
       </Dialog>

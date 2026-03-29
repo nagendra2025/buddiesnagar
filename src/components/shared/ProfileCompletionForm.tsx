@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { MIN_PASSWORD_LEN } from "@/lib/authConstants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +32,14 @@ export default function ProfileCompletionForm({
   defaultFullName,
   accountEmail,
 }: ProfileCompletionFormProps) {
+  const supabase = useMemo(() => createClient(), []);
   const defaults = useMemo(
     () => splitDefaultName(defaultFullName),
     [defaultFullName],
   );
   const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [firstName, setFirstName] = useState(defaults.first);
   const [lastName, setLastName] = useState(defaults.last);
   const [nickname, setNickname] = useState(defaults.first || "");
@@ -90,7 +95,30 @@ export default function ProfileCompletionForm({
       return;
     }
 
+    if (password.length < MIN_PASSWORD_LEN) {
+      setError(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
+      setBusy(false);
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setError("Passwords do not match.");
+      setBusy(false);
+      return;
+    }
+
     try {
+      const { error: pwError } = await supabase.auth.updateUser({
+        password,
+      });
+      if (pwError) {
+        logger.error("ProfileCompletionForm", "updateUser password failed", {
+          message: pwError.message,
+        });
+        setError(pwError.message || "Could not set password. Try again.");
+        setBusy(false);
+        return;
+      }
+
       const res = await fetch("/api/profile/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,6 +153,8 @@ export default function ProfileCompletionForm({
   }
 
   const canSubmit =
+    password.length >= MIN_PASSWORD_LEN &&
+    password === passwordConfirm &&
     firstName.trim() &&
     lastName.trim() &&
     nickname.trim() &&
@@ -139,9 +169,10 @@ export default function ProfileCompletionForm({
           Finish your BuddyNagar profile
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          You already chose your <strong>email and password</strong> when you
-          opened your account. Confirm the rest below — only{" "}
-          <strong>location</strong> is optional.
+          You confirmed your email from the link we sent. Set a password you’ll
+          use with <strong>Back again?</strong> next time, then fill in your
+          profile — only <strong>location</strong>, <strong>phone</strong>, and{" "}
+          <strong>what I do now</strong> are optional.
         </p>
       </CardHeader>
       <CardContent>
@@ -156,6 +187,31 @@ export default function ProfileCompletionForm({
               disabled
               className="bg-muted"
             />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="pc-password">Password</Label>
+              <Input
+                id="pc-password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={`At least ${MIN_PASSWORD_LEN} characters`}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pc-password2">Confirm password</Label>
+              <Input
+                id="pc-password2"
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                required
+              />
+            </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
             <div className="grid gap-2">
