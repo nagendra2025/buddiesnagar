@@ -1,10 +1,18 @@
 -- BuddyNagar — Indian festivals & special days for Today's spotlight (wishes table)
 --
--- Spotlight matches recurring wishes by calendar month+day only (see SpotlightSection).
--- Lunar / luni-solar festivals (Eid, exact Diwali, etc.) shift on the Gregorian calendar;
--- adjust wish_date in Supabase when needed, or add extra one-off rows (is_recurring = false).
+-- HOW SPOTLIGHT USES wish_date (see src/components/sections/SpotlightSection.tsx):
 --
--- Dates below use year 2000 as a neutral anchor; only month and day matter when is_recurring = true.
+--   • is_recurring = TRUE  → match TODAY using MONTH and DAY only. The YEAR in the
+--     database is IGNORED. Year 2000 is a placeholder: SQL date columns need a year;
+--     we picked 2000 as a neutral anchor. You do NOT need to change it to 2026.
+--
+--   • is_recurring = FALSE → one-off wish: match full calendar date (year + month + day).
+--
+-- Buddy BIRTHDAYS in spotlight come from public.profiles (birthday_month, birthday_day),
+-- not from this table. wishes is only for festivals / national days / special messages.
+--
+-- Lunar festivals that move on the Gregorian calendar: adjust wish_date month/day in
+-- Supabase when needed, or add one-off rows with is_recurring = false and the real date.
 
 insert into public.wishes (type, title, message, banner_color, icon_emoji, wish_date, is_recurring, is_active)
 select v.type, v.title, v.message, v.color, v.emoji, v.d::date, true, true

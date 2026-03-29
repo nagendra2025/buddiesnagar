@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import type { SuggestionRow } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb } from "lucide-react";
 import { logger } from "@/lib/logger";
+import AvatarFallback from "@/components/shared/AvatarFallback";
+
+function submitterLabel(s: SuggestionRow): string {
+  const nick = s.profiles?.nickname?.trim();
+  if (nick) return nick;
+  const name = s.profiles?.full_name?.trim();
+  if (name) return name;
+  return "Buddy";
+}
 
 interface SuggestionsSectionProps {
   initialItems: SuggestionRow[];
@@ -28,6 +38,14 @@ export default function SuggestionsSection({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
+  useEffect(() => {
+    setVoted(new Set(initialVoted));
+  }, [initialVoted]);
 
   async function submitSuggestion() {
     if (!userId || text.trim().length < 3) return;
@@ -81,7 +99,8 @@ export default function SuggestionsSection({
               What should we add next?
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Ideas for BuddyNagar — vote for what the gang wants most.
+              Ideas for BuddyNagar — vote for what the gang wants most. Everyone
+              can see who suggested what.
             </p>
           </div>
         </div>
@@ -113,11 +132,14 @@ export default function SuggestionsSection({
           </Card>
         ) : (
           <p className="mt-6 text-sm text-muted-foreground">
-            Log in with your magic link to suggest ideas or vote.
+            <a href="#sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
+              Log in
+            </a>{" "}
+            to suggest ideas or vote.
           </p>
         )}
 
-        <ul className="mt-8 flex flex-col gap-3">
+        <ul className="mt-8 flex flex-col gap-4">
           {sorted.length === 0 ? (
             <li className="text-center text-muted-foreground">
               No suggestions yet — add the first one.
@@ -125,26 +147,47 @@ export default function SuggestionsSection({
           ) : (
             sorted.map((s) => (
               <li key={s.id}>
-                <Card>
-                  <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <Card className="overflow-hidden border-primary/15 shadow-sm">
+                  <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:gap-5 sm:p-5">
+                    <div className="flex shrink-0 items-start gap-3 sm:flex-col sm:items-center sm:pt-1">
+                      <AvatarFallback
+                        name={submitterLabel(s)}
+                        className="h-12 w-12 text-sm ring-2 ring-primary/20"
+                      />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-base leading-relaxed">{s.content}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {s.profiles?.full_name ?? "Buddy"} ·{" "}
-                        <Badge variant="outline" className="ml-1">
+                      <div className="flex flex-wrap items-center gap-2 gap-y-1">
+                        <p className="font-semibold text-foreground">
+                          {submitterLabel(s)}
+                        </p>
+                        {s.profiles?.full_name?.trim() &&
+                        submitterLabel(s) !== s.profiles.full_name.trim() ? (
+                          <span className="text-xs text-muted-foreground">
+                            ({s.profiles.full_name.trim()})
+                          </span>
+                        ) : null}
+                        <Badge variant="outline" className="text-xs">
                           {s.status}
                         </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {format(new Date(s.created_at), "MMM d, yyyy · h:mm a")}
+                      </p>
+                      <p className="mt-3 text-base leading-relaxed text-foreground">
+                        {s.content}
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={!userId || voted.has(s.id)}
-                      onClick={() => void vote(s.id)}
-                      className="shrink-0"
-                    >
-                      {voted.has(s.id) ? "Voted" : `Upvote · ${s.votes ?? 0}`}
-                    </Button>
+                    <div className="flex shrink-0 items-center sm:flex-col sm:justify-center">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!userId || voted.has(s.id)}
+                        onClick={() => void vote(s.id)}
+                        className="w-full min-w-[8rem] sm:w-auto"
+                      >
+                        {voted.has(s.id) ? "Voted" : `Upvote · ${s.votes ?? 0}`}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </li>

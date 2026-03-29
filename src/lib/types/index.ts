@@ -132,5 +132,5 @@ export interface SuggestionRow {
   status: string;
   votes: number;
   created_at: string;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string; nickname?: string | null } | null;
 }

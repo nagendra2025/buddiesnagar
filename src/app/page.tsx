@@ -26,6 +26,7 @@ import type { NewsCategory } from "@/lib/types";
 import Link from "next/link";
 import { signPendingGalleryPreviews } from "@/lib/gallerySignedPreview";
 import { contentExpiryCutoffIso } from "@/lib/contentTtl";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export default async function Home() {
   const gallerySelect =
     "id, uploaded_by, image_url, caption, year_approx, likes, is_approved, uploaded_at, pending_storage_path, profiles!uploaded_by(full_name)";
   const suggestionSelect =
-    "id, user_id, content, status, votes, created_at, profiles!user_id(full_name)";
+    "id, user_id, content, status, votes, created_at, profiles!user_id(full_name, nickname)";
 
   const galleryAsAdmin = Boolean(user && isAdmin(myProfile));
   let galleryQ = supabase
@@ -150,7 +151,7 @@ export default async function Home() {
     { data: cinemaRows },
     { data: poetryRows },
     { data: galleryRows },
-    { data: suggestionRows },
+    suggestionsResult,
     { data: cinemaLikeRows },
     { data: poetryLikeRows },
     { data: galleryLikeRows },
@@ -169,7 +170,10 @@ export default async function Home() {
       .gte("posted_at", postsNotOlderThan)
       .order("posted_at", { ascending: false }),
     galleryQ.order("uploaded_at", { ascending: false }),
-    supabase.from("suggestions").select(suggestionSelect).order("created_at", { ascending: false }),
+    supabase
+      .from("suggestions")
+      .select(suggestionSelect)
+      .order("created_at", { ascending: false }),
     user
       ? supabase.from("cinema_news_likes").select("news_id").eq("user_id", user.id)
       : Promise.resolve({ data: [] as { news_id: string }[] | null }),
@@ -184,7 +188,15 @@ export default async function Home() {
       : Promise.resolve({ data: [] as { suggestion_id: string }[] | null }),
   ]);
 
+  const { data: suggestionRows, error: suggestionQueryError } = suggestionsResult;
+  if (suggestionQueryError) {
+    logger.error("Home", "suggestions fetch failed", {
+      message: suggestionQueryError.message,
+    });
+  }
+
   type P = { full_name: string };
+  type SuggestionProfile = { full_name: string; nickname?: string | null };
 
   const cinemaItems = (cinemaRows ?? []).map((r) => ({
     ...(r as Record<string, unknown>),
@@ -220,8 +232,9 @@ export default async function Home() {
 
   const suggestionItems = (suggestionRows ?? []).map((r) => ({
     ...(r as Record<string, unknown>),
-    profiles: oneEmbedded<P>(
-      (r as { profiles?: P | P[] | null }).profiles ?? null,
+    profiles: oneEmbedded<SuggestionProfile>(
+      (r as { profiles?: SuggestionProfile | SuggestionProfile[] | null }).profiles ??
+        null,
     ),
   })) as SuggestionRow[];
 
