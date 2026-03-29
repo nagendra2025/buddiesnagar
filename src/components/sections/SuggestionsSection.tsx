@@ -185,7 +185,7 @@ export default function SuggestionsSection({
                         onClick={() => void vote(s.id)}
                         className="w-full min-w-[8rem] sm:w-auto"
                       >
-                        {voted.has(s.id) ? "Voted" : `Upvote · ${s.votes ?? 0}`}
+                        {`${voted.has(s.id) ? "Voted" : "Upvote"} · ${s.votes ?? 0}`}
                       </Button>
                     </div>
                   </CardContent>
