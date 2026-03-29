@@ -32,7 +32,7 @@ export function userFacingAuthEmailError(raw: string | undefined): string {
   if (m.includes("invalid") && m.includes("email")) {
     return "That email address was rejected. Check for typos.";
   }
-  const trimmed = raw.trim();
+  const trimmed = (raw ?? "").trim();
   if (trimmed.length > 0 && trimmed.length <= 220) {
     return trimmed;
   }
