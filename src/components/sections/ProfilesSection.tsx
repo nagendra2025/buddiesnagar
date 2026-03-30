@@ -3,10 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AvatarFallback from "@/components/shared/AvatarFallback";
 
+function compareProfilesAlphabetically(a: Profile, b: Profile): number {
+  const byName = a.full_name.localeCompare(b.full_name, undefined, {
+    sensitivity: "base",
+  });
+  if (byName !== 0) return byName;
+  return (a.join_order ?? 0) - (b.join_order ?? 0);
+}
+
 export default function ProfilesSection({ profiles }: { profiles: Profile[] }) {
-  const sorted = [...profiles].sort(
-    (a, b) => (a.join_order ?? 999) - (b.join_order ?? 999),
-  );
+  const sorted = [...profiles].sort(compareProfilesAlphabetically);
 
   return (
     <section
@@ -18,7 +24,8 @@ export default function ProfilesSection({ profiles }: { profiles: Profile[] }) {
           Our gang
         </h2>
         <p className="mt-2 text-base text-muted-foreground">
-          The Kadapa buddies on BuddyNagar, in join order.
+          Alphabetical by name. Each card still shows who joined when; the hero
+          “Who joined” list stays in arrival order.
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.length === 0 ? (
