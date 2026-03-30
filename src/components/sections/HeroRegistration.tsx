@@ -400,9 +400,23 @@ export default function HeroRegistration({
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {openBuddies.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Everyone here has joined — welcome back, gang.
-                  </p>
+                  initialOpen.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No names on the wall yet.
+                    </p>
+                  ) : (
+                    <div className="w-full space-y-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-3 sm:px-4">
+                      <p
+                        className="text-base font-medium leading-relaxed text-foreground"
+                        lang="te"
+                      >
+                        అందరూ వచ్చేశారు — ఇక కథలే మిగిలాయి.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Time to spill the fun.
+                      </p>
+                    </div>
+                  )
                 ) : (
                   openBuddies.map((b) => (
                     <Button
