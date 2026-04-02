@@ -10,6 +10,7 @@ import CinemaNewsSection from "@/components/sections/CinemaNewsSection";
 import PoetryWallSection from "@/components/sections/PoetryWallSection";
 import MemoryLaneSection from "@/components/sections/MemoryLaneSection";
 import SuggestionsSection from "@/components/sections/SuggestionsSection";
+import TimezonesSection from "@/components/sections/TimezonesSection";
 import { canPostCinema, canPostPoetry, isAdmin } from "@/lib/permissions";
 import { oneEmbedded } from "@/lib/embeddings";
 import type {
@@ -279,6 +280,7 @@ export default async function Home() {
           isAdmin={galleryAsAdmin}
           likedIds={likedGallery}
         />
+        <TimezonesSection />
         <SuggestionsSection
           initialItems={suggestionItems}
           userId={user?.id ?? null}

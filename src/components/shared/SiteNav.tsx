@@ -10,6 +10,7 @@ const links = [
   { href: "#cinema", label: "Cinema" },
   { href: "#poetry", label: "Poetry" },
   { href: "#memories", label: "Memories" },
+  { href: "#timezones", label: "Timezones" },
   { href: "#suggest", label: "Ideas" },
 ] as const;
 
@@ -19,7 +20,7 @@ export default function SiteNav({
   isSignedIn?: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
         <Link
           href="#hero"

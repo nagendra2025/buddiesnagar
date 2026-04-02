@@ -6,6 +6,7 @@ import { fetchNewsFromRss } from "@/lib/news/rssFallback";
 import type { NewsArticle } from "@/lib/types";
 
 const TTL_MS = 2 * 60 * 60 * 1000;
+const NEWS_API_TIMEOUT_MS = 8000;
 
 function mapCategoryToNewsApi(category: string): string {
   const c = category.toLowerCase();
@@ -27,6 +28,20 @@ type NewsApiFetchResult = {
   newsApiErrorCode?: string;
 };
 
+type NewsApiRaw = {
+  status?: string;
+  code?: string;
+  message?: string;
+  articles?: Array<{
+    title?: string;
+    description?: string;
+    url?: string;
+    urlToImage?: string;
+    source?: { name?: string };
+    publishedAt?: string;
+  }>;
+};
+
 async function fetchFromNewsApi(category: string): Promise<NewsApiFetchResult> {
   const key = process.env.NEWS_API_KEY;
   if (!key) return { articles: [] };
@@ -46,20 +61,29 @@ async function fetchFromNewsApi(category: string): Promise<NewsApiFetchResult> {
     url.searchParams.set("country", "in");
   }
 
-  const res = await fetch(url.toString(), { next: { revalidate: 0 } });
-  const raw = (await res.json()) as {
-    status?: string;
-    code?: string;
-    message?: string;
-    articles?: Array<{
-      title?: string;
-      description?: string;
-      url?: string;
-      urlToImage?: string;
-      source?: { name?: string };
-      publishedAt?: string;
-    }>;
-  };
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(NEWS_API_TIMEOUT_MS),
+    });
+  } catch (e) {
+    logger.warn("api/news", "NewsAPI fetch failed", {
+      message: e instanceof Error ? e.message : String(e),
+    });
+    return { articles: [] };
+  }
+
+  let raw: NewsApiRaw;
+  try {
+    raw = (await res.json()) as NewsApiRaw;
+  } catch (e) {
+    logger.warn("api/news", "NewsAPI invalid JSON", {
+      status: res.status,
+      message: e instanceof Error ? e.message : String(e),
+    });
+    return { articles: [], newsApiHttpStatus: res.status };
+  }
 
   if (!res.ok) {
     logger.warn("api/news", "NewsAPI request failed", { status: res.status });

@@ -174,19 +174,21 @@ export default function HeroRegistration({
     });
     setReturnBusy(false);
     if (error) {
-      logger.error("HeroRegistration", "signInWithPassword failed", {
-        message: error.message,
-      });
       const low = error.message.toLowerCase();
       if (
         low.includes("invalid") ||
         low.includes("credentials") ||
         low.includes("password")
       ) {
+        // Expected user mistake: avoid console.error overlay in dev.
+        logger.info("HeroRegistration", "signInWithPassword invalid credentials");
         setReturnMessage(
           "Wrong email or password. Use “Forgot password?” below for a one-time email link, or the same email and password you saved when you finished your profile.",
         );
       } else {
+        logger.error("HeroRegistration", "signInWithPassword failed", {
+          message: error.message,
+        });
         setReturnMessage(error.message);
       }
       return;

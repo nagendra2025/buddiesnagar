@@ -1,6 +1,8 @@
 import type { NewsArticle } from "@/lib/types";
 
 /** Public RSS feeds (no API key). Used when NewsAPI fails or is unavailable in production. */
+const RSS_FETCH_TIMEOUT_MS = 5000;
+
 const CATEGORY_FEEDS: Record<string, string[]> = {
   "Telugu News": [
     "https://www.thehindu.com/news/national/telangana/feeder/default.rss",
@@ -108,6 +110,7 @@ export async function fetchNewsFromRss(
       const res = await fetch(feedUrl, {
         headers,
         next: { revalidate: 0 },
+        signal: AbortSignal.timeout(RSS_FETCH_TIMEOUT_MS),
       });
       if (!res.ok) continue;
       const xml = await res.text();
