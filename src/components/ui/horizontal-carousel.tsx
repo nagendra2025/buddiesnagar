@@ -103,6 +103,13 @@ export function HorizontalCarousel({
   );
 }
 
-/** Fixed-width slide for carousels (news, cinema cards). */
+/** Fixed-width slide for carousels (cinema, poetry, etc.). */
 export const carouselSlideClassName =
   "min-w-[min(100%,20rem)] max-w-md shrink-0 snap-start sm:min-w-[22rem]";
+
+/**
+ * News carousel: fit exactly 3 full cards in the visible track on md+ (no clipped third tile).
+ * Smaller breakpoints keep slightly narrower tiles for comfortable swipe.
+ */
+export const newsCarouselSlideClassName =
+  "shrink-0 snap-start basis-[min(100%,18rem)] sm:basis-[min(100%,19rem)] md:basis-[calc((100%-2rem)/3)] md:min-w-0";

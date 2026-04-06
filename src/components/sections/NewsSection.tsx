@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   HorizontalCarousel,
-  carouselSlideClassName,
+  newsCarouselSlideClassName,
 } from "@/components/ui/horizontal-carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper } from "lucide-react";
@@ -169,7 +169,7 @@ export default function NewsSection({
             scrollResetKey={category}
           >
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className={carouselSlideClassName}>
+              <div key={i} className={newsCarouselSlideClassName}>
                 <Card className="h-full">
                   <CardContent className="space-y-2 p-4">
                     <Skeleton className="aspect-video w-full rounded-xl" />
@@ -192,7 +192,7 @@ export default function NewsSection({
             scrollResetKey={newsCarouselKey}
           >
             {filtered.map((a) => (
-              <div key={a.id} className={carouselSlideClassName}>
+              <div key={a.id} className={newsCarouselSlideClassName}>
                 <Card className="h-full overflow-hidden">
                   <CardContent className="p-0">
                     {a.image_url ? (
@@ -202,7 +202,7 @@ export default function NewsSection({
                           alt=""
                           fill
                           className="object-cover"
-                          sizes="320px"
+                          sizes="(max-width: 767px) 85vw, 32vw"
                           unoptimized
                         />
                       </div>

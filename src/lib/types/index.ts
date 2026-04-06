@@ -11,6 +11,7 @@ export interface Profile {
   avatar_url: string | null;
   city: string | null;
   bio: string | null;
+  timezone?: string | null;
   birthday_month: number | null;
   birthday_day: number | null;
   birthday_year?: number | null;

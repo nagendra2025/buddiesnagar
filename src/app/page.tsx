@@ -258,7 +258,7 @@ export default async function Home() {
           isSignedIn={Boolean(user)}
           pendingAccountEmail={user?.email ?? null}
         />
-        <ProfilesSection profiles={joined} />
+        <ProfilesSection profiles={joined} currentUserId={user?.id ?? null} />
         <SpotlightSection profiles={joined} wishes={wishList} />
         <FunFactSection fact={todayFact} userId={user?.id ?? null} />
         <NewsSection defaultCategory={defaultNewsCategory} />

@@ -121,6 +121,26 @@ export default function HeroRegistration({
     });
   }, [initialOpen, joined]);
 
+  const joinedAvatarCloud = useMemo(() => {
+    return joined.map((p, i) => {
+      const col = i % 4;
+      const row = Math.floor(i / 4) % 3;
+      const idSeed =
+        p.id
+          .slice(0, 8)
+          .split("")
+          .reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 9;
+      const left = Math.min(88, Math.max(8, 13 + col * 24 + (idSeed - 4)));
+      const top = Math.min(82, Math.max(12, 18 + row * 26 + ((idSeed % 5) - 2)));
+      return {
+        id: p.id,
+        name: p.full_name,
+        left,
+        top,
+      };
+    });
+  }, [joined]);
+
   function resetJoinDialog() {
     setEmail("");
   }
@@ -389,32 +409,35 @@ export default function HeroRegistration({
           )
         ) : null}
 
-        <div className="grid gap-8 md:grid-cols-2">
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <h2 className="font-display text-lg font-semibold">
+        <div
+          id="weekly-highlights"
+          className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4 md:gap-5"
+        >
+          <Card className="border-dashed flex aspect-square min-w-0 w-full flex-col overflow-hidden">
+            <CardContent className="flex h-full flex-col p-3 pt-3 sm:p-4">
+              <h2 className="font-display text-base font-semibold leading-tight">
                 Names on the wall
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 line-clamp-3 text-xs leading-snug text-muted-foreground">
                 Tap your name, enter your email, and we’ll send a confirmation
                 link. After you open it, you’ll set your password and profile in
                 one step.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-2 flex min-h-0 flex-1 flex-wrap content-start gap-1.5 overflow-y-auto">
                 {openBuddies.length === 0 ? (
                   initialOpen.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       No names on the wall yet.
                     </p>
                   ) : (
-                    <div className="w-full space-y-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-3 sm:px-4">
+                    <div className="w-full space-y-1.5 rounded-lg border border-primary/25 bg-primary/5 px-2.5 py-2">
                       <p
-                        className="text-base font-medium leading-relaxed text-foreground"
+                        className="text-sm font-medium leading-snug text-foreground"
                         lang="te"
                       >
                         అందరూ వచ్చేశారు — ఇక కథలే మిగిలాయి.
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Time to spill the fun.
                       </p>
                     </div>
@@ -425,7 +448,8 @@ export default function HeroRegistration({
                       key={b.id}
                       type="button"
                       variant="outline"
-                      className="text-base"
+                      size="sm"
+                      className="h-8 max-w-full truncate px-2.5 text-xs"
                       style={{
                         transform: `rotate(${(b.id.charCodeAt(0) % 7) - 3}deg)`,
                       }}
@@ -444,40 +468,85 @@ export default function HeroRegistration({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="font-display text-lg font-semibold">
+          <Card className="flex aspect-square min-w-0 w-full flex-col overflow-hidden">
+            <CardContent className="flex h-full flex-col p-3 pt-3 sm:p-4">
+              <h2 className="font-display text-base font-semibold leading-tight">
                 Who joined
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs leading-snug text-muted-foreground">
                 New members appear here in real time.
               </p>
-              <ul className="mt-4 flex flex-col gap-3">
+              <ul className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
                 {joined.length === 0 ? (
-                  <li className="text-sm text-muted-foreground">
+                  <li className="flex flex-1 items-center text-xs text-muted-foreground">
                     Waiting for the first buddy to register.
                   </li>
                 ) : (
-                  joined.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
-                    >
-                      <AvatarFallback
-                        name={p.full_name}
-                        className="h-11 w-11 shrink-0 text-sm"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{p.full_name}</p>
-                        <p className="truncate text-sm text-muted-foreground">
-                          {p.city ? `${p.city}` : "Kadapa gang"}
-                          {p.join_order != null ? ` · #${p.join_order}` : ""}
-                        </p>
-                      </div>
-                    </li>
-                  ))
+                  <li className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card/80">
+                    <div className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-linear-to-br from-primary/5 via-transparent to-primary/10">
+                      {joinedAvatarCloud.map((a) => (
+                        <div
+                          key={a.id}
+                          className="absolute"
+                          style={{
+                            left: `${a.left}%`,
+                            top: `${a.top}%`,
+                            transform: "translate(-50%, -50%)",
+                          }}
+                        >
+                          <AvatarFallback
+                            name={a.name}
+                            className="h-9 w-9 border border-primary/20 bg-background/90 text-xs shadow-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </li>
                 )}
               </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="flex aspect-square min-w-0 w-full flex-col overflow-hidden border-primary/20 bg-card/80">
+            <CardContent className="flex h-full flex-col p-3 pt-3 sm:p-4">
+              <h2 className="font-display text-base font-semibold leading-tight">
+                Highlights of the week
+              </h2>
+              <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
+                Top 3–4 moments from cinema, poetry, memories & ideas — wired up
+                soon.
+              </p>
+              <div className="mt-2 flex min-h-0 flex-1 flex-col justify-center gap-2 overflow-y-auto rounded-md border border-dashed border-primary/25 bg-primary/5 px-2.5 py-2">
+                <p className="text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Coming next
+                </p>
+                <ul className="space-y-1.5 text-xs text-muted-foreground">
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-foreground/80">
+                      1.
+                    </span>
+                    <span>Most-loved cinema post this week</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-foreground/80">
+                      2.
+                    </span>
+                    <span>Fresh poetry or memory worth a look</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-foreground/80">
+                      3.
+                    </span>
+                    <span>Top idea people voted on</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-foreground/80">
+                      4.
+                    </span>
+                    <span>New faces on the wall (optional)</span>
+                  </li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </div>
