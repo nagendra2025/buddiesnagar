@@ -11,6 +11,7 @@ const links = [
   { href: "#poetry", label: "Poetry" },
   { href: "#memories", label: "Memories" },
   { href: "#timezones", label: "Timezones" },
+  { href: "#playground", label: "Playground" },
   { href: "#suggest", label: "Ideas" },
 ] as const;
 

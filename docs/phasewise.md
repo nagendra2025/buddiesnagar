@@ -110,25 +110,31 @@ Aligned with PRD: *Cinema, Poetry, Gallery, Suggestions*.
 
 ---
 
-## Phase 3 — Games, weather, emails (planned / not fully implemented here)
+## Phase 3 — Games, weather, emails
 
 PRD scope: *Games, Weather, Emails* (plus Vercel Cron per PRD §7).
 
-### Expected additions (when implemented)
+### NPM / runtime dependencies added (why)
 
-| Area | Likely install / build | Depends on |
+| Package | Why | Notes |
 | --- | --- | --- |
-| **Games** | Env `NEXT_PUBLIC_WHOFITS_URL`; iframe + optional Lichess fetch route; optional `chess_solves` + leaderboard RPC/RLS | Phase 1 auth for “I solved it” |
-| **Weather** | `GET /api/weather`, `OPENWEATHER_API_KEY` | Server routes + env pattern from Phase 1 |
-| **Cricket** | `GET /api/cricket`, `CRIC_API_KEY`, aggressive caching | Same as weather |
-| **Emails** | Resend SDK, `RESEND_API_KEY`, templates, cron hitting route or Edge Function | `profiles` emails, Phase 1 `email_logs` |
+| *(none new)* | `resend` already in Phase 2 for gallery notify | Reused for cron digests |
+
+### What was developed (artifacts)
+
+- **Database (`020_phase3_api_cache_email_marks.sql`):** `api_response_cache` (keyed JSON + `fetched_at`) for weather/cricket TTL reads via service role; `email_send_marks` unique `(profile_id, event_type, period_key)` so birthday and weekly emails are not duplicated.
+- **API routes:** `GET /api/weather` (OpenWeather current weather, optional `WEATHER_QUERY`, default `Kadapa,IN`); `GET /api/cricket` (CricAPI `currentMatches`, key from `CRICKET_API_KEY` / `CRIC_API_KEY` / `CRICAPI_API_KEY`); `GET|POST /api/cron/digests` (Bearer `CRON_SECRET` or `?secret=`).
+- **Cron:** `vercel.json` — daily `30 2 * * *` UTC (~8:00 IST): birthday emails (match `profiles.birthday_month` / `birthday_day` in **Asia/Kolkata**); on **Sundays** same run also sends a weekly snapshot (counts last 7 days: published cinema/poetry, approved gallery, suggestions) to every profile with an email. Rows go to `email_logs`; dedupe via `email_send_marks`.
+- **Shared libs:** `lib/cronAuth.ts`, `lib/apiResponseCache.ts`, `lib/digestCronEmail.ts`; purge cron now imports `authorizeCron` from `cronAuth`.
+- **UI:** `#playground` — two Lichess puzzle iframes (`training/frame?puzzle=…`, IDs from `NEXT_PUBLIC_LICHESS_PUZZLE_MATE2` / `MATE3`), WhoFits as copy + URL + new-tab link (`NEXT_PUBLIC_WHOFITS_URL`), weather + cricket panels.
+- **Config:** `.env.example` documents Phase 3 env vars; `next.config.ts` allows OpenWeather icon host for `next/image`.
 
 ### Why Phase 3 comes after 1–2
 
-- Needs **stable identity** (Phase 1) and **content surface** (Phase 2) so emails and “weekly digest” have meaningful context.
-- Cron jobs should not be wired seriously until **production** concerns (Phase 4) are near.
+- Needs **stable identity** (Phase 1) and **content surface** (Phase 2) so weekly digest counts mean something.
+- Production hardening of cron secrets and Resend domains remains Phase 4.
 
-*When Phase 3 is implemented, extend this section with actual packages, files, and migrations.*
+**Phase 3 complete** (this repo): playground section, weather/cricket routes with DB cache when `SUPABASE_SERVICE_ROLE_KEY` is set, digest cron + Resend + logs + dedupe marks.
 
 ---
 
@@ -161,4 +167,4 @@ PRD scope: *Vercel deploy, secrets, auth URLs, RLS review, cron, observability, 
 
 ---
 
-*Document version: reflects Phases 1–2 as implemented in-repo. Update this file when Phase 3+ land.*
+*Document version: reflects Phases 1–3 as implemented in-repo. Update this file when Phase 4+ land.*

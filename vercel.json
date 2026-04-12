@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/purge-expired-posts",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/digests",
+      "schedule": "30 2 * * *"
     }
   ]
 }

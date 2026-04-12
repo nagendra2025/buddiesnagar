@@ -11,6 +11,7 @@ import PoetryWallSection from "@/components/sections/PoetryWallSection";
 import MemoryLaneSection from "@/components/sections/MemoryLaneSection";
 import SuggestionsSection from "@/components/sections/SuggestionsSection";
 import TimezonesSection from "@/components/sections/TimezonesSection";
+import Phase3PlaygroundSection from "@/components/sections/Phase3PlaygroundSection";
 import { canPostCinema, canPostPoetry, isAdmin } from "@/lib/permissions";
 import { oneEmbedded } from "@/lib/embeddings";
 import type {
@@ -281,6 +282,7 @@ export default async function Home() {
           likedIds={likedGallery}
         />
         <TimezonesSection />
+        <Phase3PlaygroundSection />
         <SuggestionsSection
           initialItems={suggestionItems}
           userId={user?.id ?? null}

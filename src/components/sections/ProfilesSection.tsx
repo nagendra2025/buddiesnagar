@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 const INDIA_TIMEZONES = [{ value: "Asia/Kolkata", label: "India Standard Time (Asia/Kolkata)" }] as const;
 const USA_TIMEZONES = [
@@ -289,98 +290,177 @@ export default function ProfilesSection({
       </div>
 
       <Dialog open={Boolean(editing)} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent
+          className={cn(
+            "flex max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-4 pt-12",
+            "left-1/2 top-[2%] -translate-x-1/2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2",
+            "sm:max-h-[min(90dvh,44rem)] sm:max-w-lg sm:w-[calc(100%-2rem)] sm:gap-4 sm:p-6 sm:pt-6",
+          )}
+        >
+          <DialogHeader className="shrink-0 space-y-1.5 pr-7 text-left sm:pr-8">
             <DialogTitle>Edit profile</DialogTitle>
             <DialogDescription>
               Update your details. This opens only from your own initials in Our gang.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-1">
-            <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="ep-first">First name</Label>
-                <Input id="ep-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+            <div className="grid gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="grid min-w-0 gap-2">
+                  <Label htmlFor="ep-first">First name</Label>
+                  <Input
+                    id="ep-first"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                  <Label htmlFor="ep-last">Last name</Label>
+                  <Input
+                    id="ep-last"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="ep-last">Last name</Label>
-                <Input id="ep-last" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                <Label htmlFor="ep-nick">Nickname</Label>
+                <Input
+                  id="ep-nick"
+                  className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  required
+                />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ep-nick">Nickname</Label>
-              <Input id="ep-nick" value={nickname} onChange={(e) => setNickname(e.target.value)} required />
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3 sm:gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="ep-bm">Birth month</Label>
+                  <Input
+                    id="ep-bm"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    inputMode="numeric"
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ep-bd">Birth day</Label>
+                  <Input
+                    id="ep-bd"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    inputMode="numeric"
+                    value={day}
+                    onChange={(e) => setDay(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ep-by">Birth year</Label>
+                  <Input
+                    id="ep-by"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    inputMode="numeric"
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="grid min-w-0 gap-2">
+                  <Label htmlFor="ep-city">Location</Label>
+                  <Input
+                    id="ep-city"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                  <Label htmlFor="ep-phone">Phone</Label>
+                  <Input
+                    id="ep-phone"
+                    className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid min-w-0 gap-2">
+                <Label htmlFor="ep-timezone">Timezone</Label>
+                <select
+                  id="ep-timezone"
+                  className="flex min-h-11 w-full min-w-0 touch-manipulation rounded-lg border border-input bg-background px-3 text-base sm:min-h-10 sm:text-sm"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  required
+                >
+                  <option value="">Select timezone</option>
+                  <optgroup label="India">
+                    {INDIA_TIMEZONES.map((z) => (
+                      <option key={z.value} value={z.value}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="United States">
+                    {USA_TIMEZONES.map((z) => (
+                      <option key={z.value} value={z.value}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Canada">
+                    {CANADA_TIMEZONES.map((z) => (
+                      <option key={z.value} value={z.value}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
               <div className="grid gap-2">
-                <Label htmlFor="ep-bm">Birth month</Label>
-                <Input id="ep-bm" inputMode="numeric" value={month} onChange={(e) => setMonth(e.target.value)} required />
+                <Label htmlFor="ep-bio">What I do now (max 120)</Label>
+                <Input
+                  id="ep-bio"
+                  className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                  maxLength={120}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  required
+                />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="ep-bd">Birth day</Label>
-                <Input id="ep-bd" inputMode="numeric" value={day} onChange={(e) => setDay(e.target.value)} required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="ep-by">Birth year</Label>
-                <Input id="ep-by" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value)} required />
-              </div>
+              {error ? <p className="text-sm text-red-600">{error}</p> : null}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="ep-city">Location</Label>
-                <Input id="ep-city" value={city} onChange={(e) => setCity(e.target.value)} required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="ep-phone">Phone</Label>
-                <Input id="ep-phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ep-timezone">Timezone</Label>
-              <select
-                id="ep-timezone"
-                className="flex h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                required
-              >
-                <option value="">Select timezone</option>
-                <optgroup label="India">
-                  {INDIA_TIMEZONES.map((z) => (
-                    <option key={z.value} value={z.value}>
-                      {z.label}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="United States">
-                  {USA_TIMEZONES.map((z) => (
-                    <option key={z.value} value={z.value}>
-                      {z.label}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Canada">
-                  {CANADA_TIMEZONES.map((z) => (
-                    <option key={z.value} value={z.value}>
-                      {z.label}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ep-bio">What I do now (max 120)</Label>
-              <Input id="ep-bio" maxLength={120} value={bio} onChange={(e) => setBio(e.target.value)} required />
-            </div>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditing(null)}>
-                Cancel
-              </Button>
-              <Button type="button" disabled={busy} onClick={() => void saveProfile()}>
-                {busy ? "Saving..." : "Save profile"}
-              </Button>
-            </div>
+          </div>
+
+          <div className="mt-3 flex shrink-0 flex-col gap-2 border-t border-border/70 pt-3 sm:mt-0 sm:flex-row sm:justify-end sm:border-t-0 sm:pt-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full touch-manipulation sm:min-h-10 sm:w-auto"
+              onClick={() => setEditing(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="min-h-11 w-full touch-manipulation sm:min-h-10 sm:w-auto"
+              disabled={busy}
+              onClick={() => void saveProfile()}
+            >
+              {busy ? "Saving..." : "Save profile"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

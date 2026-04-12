@@ -4,17 +4,9 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { contentExpiryCutoffIso } from "@/lib/contentTtl";
 import { parseSupabasePublicObjectUrl } from "@/lib/supabasePublicStorageUrl";
 import { logger } from "@/lib/logger";
+import { authorizeCron } from "@/lib/cronAuth";
 
 const REMOVE_CHUNK = 80;
-
-function authorizeCron(request: Request): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  const auth = request.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  const url = new URL(request.url);
-  return url.searchParams.get("secret") === secret;
-}
 
 async function removePaths(svc: SupabaseClient, bucket: string, paths: string[]) {
   const unique = [...new Set(paths.filter(Boolean))];

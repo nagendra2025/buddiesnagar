@@ -2,25 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { PROFILE_TIMEZONES } from "@/lib/profileTimezones";
 
 const currentYear = new Date().getFullYear();
-const ALLOWED_TIMEZONES = [
-  "Asia/Kolkata",
-  "America/New_York",
-  "America/Detroit",
-  "America/Chicago",
-  "America/Denver",
-  "America/Phoenix",
-  "America/Los_Angeles",
-  "America/Anchorage",
-  "Pacific/Honolulu",
-  "America/Toronto",
-  "America/Vancouver",
-  "America/Edmonton",
-  "America/Winnipeg",
-  "America/Halifax",
-  "America/St_Johns",
-] as const;
 
 const bodySchema = z.object({
   firstName: z.string().min(1).max(80).trim(),
@@ -29,7 +13,7 @@ const bodySchema = z.object({
   phone: z.string().min(1).max(32).trim(),
   city: z.string().min(1).max(120).trim(),
   bio: z.string().min(1).max(120).trim(),
-  timezone: z.enum(ALLOWED_TIMEZONES),
+  timezone: z.enum(PROFILE_TIMEZONES as unknown as [string, ...string[]]),
   birthdayMonth: z.number().int().min(1).max(12),
   birthdayDay: z.number().int().min(1).max(31),
   birthdayYear: z.number().int().min(1900).max(currentYear + 1),
