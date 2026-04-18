@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { readCachedJson, writeCachedJson } from "@/lib/apiResponseCache";
+import {
+  readCachedJson,
+  readCachedJsonStaleFallback,
+  writeCachedJson,
+} from "@/lib/apiResponseCache";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
 const TTL_MS = 10 * 60 * 1000;
-const FETCH_TIMEOUT_MS = 10000;
+/** CricAPI can be slow; 20s reduces spurious aborts vs 10s. */
+const FETCH_TIMEOUT_MS = 20_000;
+/** If live fetch fails, serve last successful payload up to this age (ms). */
+const STALE_FALLBACK_MAX_MS = 36 * 60 * 60 * 1000;
+const RETRY_DELAY_MS = 400;
 
 export type CricketMatchBrief = {
   id: string;
@@ -42,6 +50,21 @@ type CricResponse = {
 };
 
 const CACHE_KEY = "cricket:currentMatches";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function staleCricketResponse(): Promise<NextResponse | null> {
+  const stale = await readCachedJsonStaleFallback<CricketPayload>(
+    CACHE_KEY,
+    STALE_FALLBACK_MAX_MS,
+  );
+  if (stale?.body?.ok) {
+    return NextResponse.json({ ...stale.body, cached: true });
+  }
+  return null;
+}
 
 function cricketApiKey(): string | undefined {
   return (
@@ -88,27 +111,44 @@ export async function GET() {
   const url = new URL("https://api.cricapi.com/v1/currentMatches");
   url.searchParams.set("apikey", apiKey);
   url.searchParams.set("offset", "0");
+  const urlStr = url.toString();
 
-  let res: Response;
-  try {
-    res = await fetch(url.toString(), {
+  async function fetchOnce(): Promise<Response> {
+    return fetch(urlStr, {
       next: { revalidate: 0 },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
+  }
+
+  let res: Response;
+  try {
+    res = await fetchOnce();
   } catch (e) {
-    logger.warn("api/cricket", "fetch failed", {
+    logger.warn("api/cricket", "fetch failed (will retry once)", {
       message: e instanceof Error ? e.message : String(e),
     });
-    return NextResponse.json(
-      { ok: false, error: "Cricket API unreachable.", matches: [] },
-      { status: 502 },
-    );
+    await sleep(RETRY_DELAY_MS);
+    try {
+      res = await fetchOnce();
+    } catch (e2) {
+      logger.warn("api/cricket", "fetch failed after retry", {
+        message: e2 instanceof Error ? e2.message : String(e2),
+      });
+      const fallback = await staleCricketResponse();
+      if (fallback) return fallback;
+      return NextResponse.json(
+        { ok: false, error: "Cricket API unreachable.", matches: [] },
+        { status: 502 },
+      );
+    }
   }
 
   let raw: CricResponse;
   try {
     raw = (await res.json()) as CricResponse;
   } catch {
+    const fallback = await staleCricketResponse();
+    if (fallback) return fallback;
     return NextResponse.json(
       { ok: false, error: "Invalid cricket response.", matches: [] },
       { status: 502 },
@@ -120,6 +160,8 @@ export async function GET() {
       http: res.status,
       reason: raw.reason,
     });
+    const fallback = await staleCricketResponse();
+    if (fallback) return fallback;
     return NextResponse.json(
       {
         ok: false,

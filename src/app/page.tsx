@@ -260,9 +260,9 @@ export default async function Home() {
           pendingAccountEmail={user?.email ?? null}
         />
         <ProfilesSection profiles={joined} currentUserId={user?.id ?? null} />
-        <SpotlightSection profiles={joined} wishes={wishList} />
+        {user ? <SpotlightSection profiles={joined} wishes={wishList} /> : null}
         <FunFactSection fact={todayFact} userId={user?.id ?? null} />
-        <NewsSection defaultCategory={defaultNewsCategory} />
+        {user ? <NewsSection defaultCategory={defaultNewsCategory} /> : null}
         <CinemaNewsSection
           initialItems={cinemaItems}
           userId={user?.id ?? null}
@@ -281,8 +281,8 @@ export default async function Home() {
           isAdmin={galleryAsAdmin}
           likedIds={likedGallery}
         />
-        <TimezonesSection />
-        <Phase3PlaygroundSection />
+        {user ? <TimezonesSection /> : null}
+        {user ? <Phase3PlaygroundSection /> : null}
         <SuggestionsSection
           initialItems={suggestionItems}
           userId={user?.id ?? null}

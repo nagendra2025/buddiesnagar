@@ -4,14 +4,14 @@ import SiteNavAuth from "@/components/shared/SiteNavAuth";
 const links = [
   { href: "#hero", label: "Home" },
   { href: "#gang", label: "Our gang" },
-  { href: "#spotlight", label: "Spotlight" },
+  { href: "#spotlight", label: "Spotlight", signedInOnly: true },
   { href: "#funfact", label: "Fun fact" },
-  { href: "#news", label: "News" },
+  { href: "#news", label: "News", signedInOnly: true },
   { href: "#cinema", label: "Cinema" },
   { href: "#poetry", label: "Poetry" },
   { href: "#memories", label: "Memories" },
-  { href: "#timezones", label: "Timezones" },
-  { href: "#playground", label: "Playground" },
+  { href: "#timezones", label: "Timezones", signedInOnly: true },
+  { href: "#playground", label: "Playground", signedInOnly: true },
   { href: "#suggest", label: "Ideas" },
 ] as const;
 
@@ -20,6 +20,10 @@ export default function SiteNav({
 }: {
   isSignedIn?: boolean;
 }) {
+  const navLinks = isSignedIn
+    ? links
+    : links.filter((l) => !("signedInOnly" in l && l.signedInOnly));
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
@@ -30,7 +34,7 @@ export default function SiteNav({
           BuddyNagar
         </Link>
         <nav className="flex flex-wrap items-center justify-end gap-1 md:gap-3">
-          {links.map((l) => (
+          {navLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
